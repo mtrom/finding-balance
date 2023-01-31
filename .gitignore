@@ -36,3 +36,6 @@ main.dSYM/*
 
 # the main executable
 main
+
+# cmake extras
+build/*
