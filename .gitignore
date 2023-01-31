@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# compiled debug information
+main.dSYM/*
+
+# the main executable
+main
