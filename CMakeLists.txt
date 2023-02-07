@@ -8,4 +8,8 @@ set(CMAKE_CXX_STANDARD 17)
 # places executable in bin/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# import cryptoTools library
+find_package(cryptoTools)
+
 add_executable(main main.cc utils.cc)
+target_link_libraries(main oc::cryptoTools)

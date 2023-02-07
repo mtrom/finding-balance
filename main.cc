@@ -1,31 +1,33 @@
-#include <fstream>
-#include <iostream>
-#include <random>
-#include <string>
-
-#include <vector>
-using std::vector;
-
 #include "utils.h"
 
+namespace unbalanced_psi {
 
-int main(int argc, char** argv) {
+  int main() {
+    // unbalanced_psi::test_encrypt();
 
-  // read in a file and output its contents line by line
-  std::ifstream file(argv[1]);
+    int server_size = 10;
+    int client_size = 10;
+    int overlap     = 2;
 
-  std::string line;
-  while (std::getline(file, line)) {
-    std::cout << line;
-    std::cout << "\n";
+    vector<u32> server;
+    vector<u32> client;
+    auto datasets = unbalanced_psi::generate_datasets(server_size, client_size, overlap);
+    std::tie(server, client) = datasets;
+
+
+
+    std::cout << "Server:\n";
+    for (u32 el: server) {
+      std::cout << el << "\n";
+    }
+    std::cout << "Client:\n";
+    for (u32 el: client) {
+      std::cout << el << "\n";
+    }
+    return 0;
   }
+}
 
-  // create a vector of random values
-  int size = 5;
-
-  vector<int> dataset = unbalanced_psi::generate_dataset(size);
-  for (int i = 0; i < size; i++) {
-    std::cout << std::to_string(dataset[i]) + "\n";
-  }
-  return 0;
+int main() {
+  return unbalanced_psi::main();
 }

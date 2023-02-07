@@ -1,5 +1,17 @@
 # Unbalanced PSI from SimplePIR
 
+## Build
+
+```bash
+cd cryptoTools
+python3 build.py --install --relic
+cd ..
+cmake -B build/ .
+cd build/
+make
+```
+
+
 ## TODO
 
  - layout basic architectural plan
@@ -23,5 +35,7 @@
 
 ## Notes to Self
 Check for memory leaks: `valgrind --leak-check=yes ./main`
+
+SimplePIR uses `uint32_t` from `stdin.h` for its database entries --- see `simplepir/pir/pir.h`.
 
 
