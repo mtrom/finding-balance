@@ -11,5 +11,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # import cryptoTools library
 find_package(cryptoTools)
 
-add_executable(main src/main.cc src/utils.cc)
+add_executable(main src/main.cc src/server.cc src/utils.cc)
 target_link_libraries(main oc::cryptoTools)
