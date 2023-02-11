@@ -5,9 +5,11 @@
 #include "defines.h"
 
 namespace unbalanced_psi {
-  vector<u32> generate_dataset(int size);
-  tuple<vector<u32>,vector<u32>> generate_datasets(int server_size, int client_size, int overlap);
+  vector<INPUT_TYPE> generate_dataset(int size);
+  tuple<vector<INPUT_TYPE>,vector<INPUT_TYPE>> generate_datasets(int server_size, int client_size, int overlap);
 
-  Point to_point(block value, osuCrypto::RandomOracle hash);
+  Point hash_to_group_element(INPUT_TYPE input);
+  vector<Point> hash_to_group_elements(vector<INPUT_TYPE> inputs, RandomOracle oracle);
+
   void test_encrypt();
 }

@@ -6,6 +6,9 @@
 #include <cryptoTools/Crypto/PRNG.h>
 #include <cryptoTools/Crypto/RCurve.h>
 #include <cryptoTools/Crypto/RandomOracle.h>
+#include <cryptoTools/Network/IOService.h>
+#include <cryptoTools/Network/Endpoint.h>
+#include <cryptoTools/Network/Channel.h>
 
 namespace unbalanced_psi {
 
@@ -32,4 +35,8 @@ namespace unbalanced_psi {
   using Curve  = osuCrypto::REllipticCurve;
   using Point  = osuCrypto::REccPoint;
   using Number = osuCrypto::REccNumber;
+
+  // using IOService = osuCrypto::IOService;
 }
+
+#define INPUT_TYPE u32

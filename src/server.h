@@ -1,17 +1,25 @@
 #pragma once
 
-namespace unbalanced_psi::server {
+#include "defines.h"
+
+#define IOS_THREADS 3
+
+namespace unbalanced_psi {
 
 
   class Server {
 
-    std::vector<int> dataset;
+    vector<INPUT_TYPE> dataset;
+
+    // IOService ios(IOS_THREADS);
 
     public:
       // generate or parse dataset
       // generate DDH key
       // establish network connections
-      Server(std::vector<int> *dataset/* hash fs, connection details, */);
+      Server(const vector<INPUT_TYPE>& dataset/* hash fs, connection details, */);
+
+      int size();
 
       // encrypt elements in dataset
       // create and populate hash table
