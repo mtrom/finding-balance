@@ -5,7 +5,7 @@
 using std::vector;
 
 namespace unbalanced_psi::client {
-  Client::Client(vector<int> *inset) {
-      dataset = *inset;
-  }
+    Client::Client(vector<int> *inset) {
+        dataset = *inset;
+    }
 }
