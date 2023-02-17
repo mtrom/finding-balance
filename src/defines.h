@@ -13,8 +13,9 @@
 namespace unbalanced_psi {
 
     // datatypes from std
-    using std::vector;
+    using std::array;
     using std::tuple;
+    using std::vector;
 
     // datatypes from osuCrypto
     using i64 = osuCrypto::i64;

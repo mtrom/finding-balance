@@ -4,8 +4,19 @@
 
 using std::vector;
 
-namespace unbalanced_psi::client {
-    Client::Client(vector<int> *inset) {
-        dataset = *inset;
+namespace unbalanced_psi {
+    Client::Client(const vector<int> *inputs) : dataset(inputs), encrypted(dataset.size()) {
+
+        // randomly sample secret key
+        block seed(std::rand()); // TODO: stop using rand()
+        PRNG prng(seed);
+        key.randomize(prng);
+
+        // hash elements in dataset
+        for (auto i = 0; i < dataset.size(); i++) {
+            encrypted[i] = hash_to_group_element(dataset[i]); // h(y)
+            encrypted[i] = encrypted[i] * key;                // h(y)^b
+        }
+
     }
 }

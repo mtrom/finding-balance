@@ -1,16 +1,20 @@
 #pragma once
 
-namespace unbalanced_psi::client {
+namespace unbalanced_psi {
 
     class Client {
 
-        std::vector<int> dataset;
+        std::vector<INPUT_TYPE> dataset;
+        vector<Point> encrypted;
+
+        Curve curve;
+        Number key;
 
         public:
         // generate or parse database
         // generate DDH key
         // establish network connections
-        Client(std::vector<int> *inset); /* hash f, connection details */
+        Client(const vector<INPUT_TYPE>& inputs); /* hash f, connection details */
 
         // do we need this? just run generally
         void run();

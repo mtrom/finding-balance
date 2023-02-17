@@ -1,6 +1,8 @@
 #pragma once
 
 #include "defines.h"
+#include "hashtable.h"
+#include "utils.h"
 
 #define IOS_THREADS 3
 
@@ -10,6 +12,11 @@ namespace unbalanced_psi {
     class Server {
 
         vector<INPUT_TYPE> dataset;
+        vector<Point> encrypted;
+        Hashtable hashtable;
+
+        Curve curve;
+        Number key;
 
         // IOService ios(IOS_THREADS);
 
