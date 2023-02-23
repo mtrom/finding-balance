@@ -9,7 +9,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # import cryptoTools library
+find_package(coproto)
 find_package(cryptoTools)
 
-add_executable(main src/main.cc src/server.cc src/utils.cc src/hashtable.cc)
+add_executable(main src/main.cc src/client.cc src/server.cc src/utils.cc src/hashtable.cc)
 target_link_libraries(main oc::cryptoTools)

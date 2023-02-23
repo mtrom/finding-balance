@@ -10,6 +10,8 @@
 #include <cryptoTools/Network/Endpoint.h>
 #include <cryptoTools/Network/Channel.h>
 
+#define IOS_THREADS 3
+
 namespace unbalanced_psi {
 
     // datatypes from std
@@ -37,7 +39,11 @@ namespace unbalanced_psi {
     using Point  = osuCrypto::REccPoint;
     using Number = osuCrypto::REccNumber;
 
-    // using IOService = osuCrypto::IOService;
+    // networking
+    using IOService   = osuCrypto::IOService;
+    using Session     = osuCrypto::Session;
+    using SessionMode = osuCrypto::SessionMode;
+    using Channel     = osuCrypto::Channel;
 }
 
 #define INPUT_TYPE u32

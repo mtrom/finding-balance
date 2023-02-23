@@ -9,25 +9,6 @@
 
 namespace unbalanced_psi {
 
-
-    template<typename T>
-        void print(T arg, std::string label) {
-            if (!label.empty()) {
-                std::cout << label + ": ";
-            }
-            std::cout << arg << "\n";
-            /*
-               std::cout << " (";
-               std::cout << typeid(arg).name();
-               std::cout << ")\n";
-               */
-        }
-
-    template<typename T>
-        void print(T arg) {
-            print(arg, "");
-        }
-
     /**
      * generate a mock dataset
      *
@@ -63,6 +44,12 @@ namespace unbalanced_psi {
         return datasets;
     }
 
+    /**
+     * hash a set element to a group element for ddh
+     *
+     * @param <input> set element to hash
+     * @return random group element
+     */
     Point hash_to_group_element(INPUT_TYPE input) {
         RandomOracle oracle(HASH_SIZE);
 
@@ -76,37 +63,4 @@ namespace unbalanced_psi {
         point.fromHash(hashed.data(), HASH_SIZE);
         return point;
     }
-
-    void test_encrypt() {
-
-        // PRNG init
-        block seed;
-        PRNG prng(seed);
-
-        // initialize the curve
-        Curve curve;
-
-        // Alice's element
-        Point hx = hash_to_group_element(1235);
-
-        // Bob's element
-        Point hy = hash_to_group_element(1235);
-
-        // Alice's key
-        Number a(prng);
-        print(a, "a's key");
-
-        // Bob's key
-        Number b(prng);
-        print(b, "b's key");
-
-        Point hxa = hx * a;
-        Point hxab = hxa * b;
-
-        Point hyb = hy * b;
-        Point hyba = hyb * a;
-
-        print(hxab == hyba, "final answer");
-    }
-
 }

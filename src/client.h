@@ -1,5 +1,9 @@
 #pragma once
 
+#include "defines.h"
+#include "hashtable.h"
+#include "utils.h"
+
 namespace unbalanced_psi {
 
     class Client {
@@ -9,6 +13,8 @@ namespace unbalanced_psi {
 
         Curve curve;
         Number key;
+
+        IOService ios;
 
         public:
         // generate or parse database

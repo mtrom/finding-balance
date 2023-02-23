@@ -4,7 +4,6 @@
 #include "hashtable.h"
 #include "utils.h"
 
-#define IOS_THREADS 3
 
 namespace unbalanced_psi {
 
@@ -18,7 +17,7 @@ namespace unbalanced_psi {
         Curve curve;
         Number key;
 
-        // IOService ios(IOS_THREADS);
+        IOService ios;
 
         public:
         // generate or parse dataset
@@ -28,12 +27,7 @@ namespace unbalanced_psi {
 
         int size();
 
-        // encrypt elements in dataset
-        // create and populate hash table
-        void offline();
-
-        // receive client's dataset, encrypt it, and send back
-        void listen(/* client's encrypted dataset */); // or `round_one`?
+        void run();
 
         // do the pir
         void pir();
