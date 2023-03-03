@@ -26,6 +26,15 @@ make -C build/
 ./build/bin/main
 ```
 
+Go installation:
+```bash
+cd go/
+go get github.com/ahenzinger/simplepir
+go build -o bin/server server.go
+```
+
+I think `go get` should be okay now that its in the `go.mod` file.
+
 ## Open Questions
  - how to call into SimplePIR?
  - can we do an actual stateless server-client architecture rather than two-way communication channel?
@@ -36,3 +45,4 @@ make -C build/
 Check for memory leaks: `valgrind --leak-check=yes ./main`
 
 SimplePIR uses `uint32_t` from `stdin.h` for its database entries --- see `simplepir/pir/pir.h`.
+
