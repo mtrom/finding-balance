@@ -1,16 +1,22 @@
 #include <cmath>
+#include <fstream>
+#include <ostream>
 
 #include "hashtable.h"
-
-#include "cryptoTools/Common/block.h"
+#include "utils.h"
 
 namespace unbalanced_psi {
 
-    Hashtable::Hashtable(int size) : hashf(sizeof(int)) {
-        table.resize(size, vector<Point>());
+    Hashtable::Hashtable(i64 buckets) : size(0) {
+        table.resize(buckets, vector<Point>());
     };
 
-    int Hashtable::hash(Point element) {
+    Hashtable::Hashtable(std::string filename) {
+        fromfile(filename);
+    };
+
+
+    i64 Hashtable::hash(Point element) {
         // TODO: make a more uniform hash?
         vector<u8> bytes(sizeof(element.sizeBytes()));
         element.toBytes(bytes.data());
@@ -26,12 +32,73 @@ namespace unbalanced_psi {
     }
 
     void Hashtable::insert(Point element) {
-        int index = hash(element);
+        i64 index = hash(element);
         table[index].push_back(element);
 
         if (table[index].size() > log2(table.size())) {
             throw std::overflow_error("more than log2(size) collisions");
         }
+
+        size++;
+    }
+
+
+    void Hashtable::tofile(std::string filename) {
+        std::ofstream file(filename, std::ios::out | std::ios::binary);
+        if (!file) {
+            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+        }
+
+        i64 buckets = table.size();
+        file.write((const char*) &buckets, sizeof(i64));
+        file.write((const char*) &size, sizeof(i64));
+
+        vector<u8> bytes(size * Point::size);
+        u8 *ptr = bytes.data();
+
+        for (vector<Point> bucket : table) {
+            for (Point element : bucket) {
+                element.toBytes(ptr);
+                ptr += Point::size;
+            }
+        }
+        std::cout << "[ hash ] writing " << bytes.size()
+                  << " bytes: " << to_hex(bytes) << std::endl;
+        file.write((const char*) bytes.data(), bytes.size());
+        file.close();
+    }
+
+    void Hashtable::fromfile(std::string filename) {
+        std::ifstream file(filename, std::ios::in | std::ios::binary);
+        if (!file) {
+            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+        }
+
+        i64 buckets;
+        i64 filesize;
+        file.read((char*) &buckets, sizeof(i64));
+        file.read((char*) &filesize, sizeof(i64));
+
+        table.resize(buckets, vector<Point>());
+
+        std::cout << "[ hash ] buckets = " << buckets << ", size = " << filesize << std::endl;
+
+        vector<u8> bytes(filesize * Point::size);
+        file.read((char *) bytes.data(), bytes.size());
+
+        u8 *ptr = bytes.data();
+        for (auto i = 0; i < filesize; i++) {
+            std::cout << "[ hash ] reading in element #" << i << std::endl;
+            Point element;
+            element.fromBytes(ptr);
+            ptr += Point::size;
+
+            insert(element);
+        }
+    }
+
+    i64 Hashtable::buckets() {
+        return table.size();
     }
 
     int Hashtable::max_bucket() {

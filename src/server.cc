@@ -46,6 +46,10 @@ namespace unbalanced_psi {
         std::cout << "[server] sending response: " << response.size() << std::endl;
         ddh_channel.send(response);
 
+        hashtable.tofile("bin/server.db");
+        Hashtable readin(hashtable.buckets());
+        readin.fromfile("bin/server.db");
+        std::cout << "readin.size = " << readin.size << std::endl;
     }
 
     int Server::size() {

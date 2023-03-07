@@ -5,12 +5,22 @@
 namespace unbalanced_psi {
     class Hashtable {
         vector<vector<Point>> table;
-        osuCrypto::Blake2 hashf;
 
         public:
-        Hashtable(int size);
+        i64 size;
+
+        Hashtable(i64 buckets);
+        Hashtable(std::string filename);
 
         void insert(Point element);
+
+        void tofile(std::string filename);
+
+        void fromfile(std::string filename);
+
+        i64 buckets();
+
+        std::string to_number(vector<u8> &bytes);
 
         /**
          * @return bucket with most collisions
@@ -18,6 +28,6 @@ namespace unbalanced_psi {
         int max_bucket();
 
         private:
-        int hash(Point element);
+        i64 hash(Point element);
     };
 }

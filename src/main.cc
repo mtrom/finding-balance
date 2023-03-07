@@ -10,7 +10,7 @@ namespace unbalanced_psi {
     void main() {
         vector<u32> server_dataset;
         vector<u32> client_dataset;
-        auto datasets = unbalanced_psi::generate_datasets(1000, 10, 3);
+        auto datasets = unbalanced_psi::generate_datasets(12, 10, 3);
 
         std::thread sthread([&datasets]() {
             Server server(std::get<0>(datasets));

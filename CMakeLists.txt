@@ -6,7 +6,7 @@ project(ddh_unbalanced_psi)
 set(CMAKE_CXX_STANDARD 17)
 
 # places executable in bin/
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # import cryptoTools library
 find_package(coproto)
@@ -14,3 +14,6 @@ find_package(cryptoTools)
 
 add_executable(main src/main.cc src/client.cc src/server.cc src/utils.cc src/hashtable.cc)
 target_link_libraries(main oc::cryptoTools)
+
+add_executable(tests src/tests/test_hashtable.cc src/utils.cc src/hashtable.cc)
+target_link_libraries(tests oc::cryptoTools)

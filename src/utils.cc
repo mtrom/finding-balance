@@ -63,4 +63,19 @@ namespace unbalanced_psi {
         point.fromHash(hashed.data(), HASH_SIZE);
         return point;
     }
+
+    /**
+     * convert a byte vector into a hex string for debugging
+     */
+    std::string to_hex(vector<u8> &bytes) {
+        static const char* digits = "0123456789ABCDEF";
+
+        std::string output((size_t) bytes.size() * 2, 'X');
+        for (auto i = 0; i < bytes.size(); i++) {
+            output[2 * i] = digits[bytes[i] & 0x0F];
+            output[(2 * i) + 1] = digits[(bytes[i] >> 4) & 0x0F];
+        }
+
+        return output;
+    }
 }
