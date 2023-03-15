@@ -30,7 +30,7 @@ Go installation:
 ```bash
 cd go/
 go get github.com/ahenzinger/simplepir
-go build -o bin/server server.go
+go build -o ../bin/serverpir server.go
 ```
 
 I think `go get` should be okay now that its in the `go.mod` file.

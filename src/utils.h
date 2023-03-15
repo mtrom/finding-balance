@@ -11,7 +11,7 @@ namespace unbalanced_psi {
     Point hash_to_group_element(INPUT_TYPE input);
     vector<Point> hash_to_group_elements(vector<INPUT_TYPE> inputs, RandomOracle oracle);
 
-    std::string to_hex(vector<u8> &bytes);
+    std::string to_hex(u8 *bytes, u64 size);
 
     void test_encrypt();
 }

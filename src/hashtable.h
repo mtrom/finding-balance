@@ -7,9 +7,9 @@ namespace unbalanced_psi {
         vector<vector<Point>> table;
 
         public:
-        i64 size;
+        u64 size;
 
-        Hashtable(i64 buckets);
+        Hashtable(u64 buckets);
         Hashtable(std::string filename);
 
         void insert(Point element);
@@ -18,7 +18,7 @@ namespace unbalanced_psi {
 
         void fromfile(std::string filename);
 
-        i64 buckets();
+        u64 buckets();
 
         std::string to_number(vector<u8> &bytes);
 
@@ -28,6 +28,6 @@ namespace unbalanced_psi {
         int max_bucket();
 
         private:
-        i64 hash(Point element);
+        u64 hash(Point element);
     };
 }

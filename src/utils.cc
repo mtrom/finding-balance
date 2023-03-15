@@ -67,11 +67,11 @@ namespace unbalanced_psi {
     /**
      * convert a byte vector into a hex string for debugging
      */
-    std::string to_hex(vector<u8> &bytes) {
+    std::string to_hex(u8 *bytes, u64 size) {
         static const char* digits = "0123456789ABCDEF";
 
-        std::string output((size_t) bytes.size() * 2, 'X');
-        for (auto i = 0; i < bytes.size(); i++) {
+        std::string output((size_t) size * 2, 'X');
+        for (auto i = 0; i < size; i++) {
             output[2 * i] = digits[bytes[i] & 0x0F];
             output[(2 * i) + 1] = digits[(bytes[i] >> 4) & 0x0F];
         }
