@@ -3,14 +3,16 @@
 #include <vector>
 #include <tuple>
 
+#include <cryptoTools/Common/TestCollection.h>
 #include <cryptoTools/Crypto/PRNG.h>
 #include <cryptoTools/Crypto/RCurve.h>
 #include <cryptoTools/Crypto/RandomOracle.h>
-#include <cryptoTools/Network/IOService.h>
-#include <cryptoTools/Network/Endpoint.h>
 #include <cryptoTools/Network/Channel.h>
+#include <cryptoTools/Network/Endpoint.h>
+#include <cryptoTools/Network/IOService.h>
 
 #define IOS_THREADS 3
+#define MOCK_ELEMENT -1
 
 namespace unbalanced_psi {
 
@@ -44,6 +46,10 @@ namespace unbalanced_psi {
     using Session     = osuCrypto::Session;
     using SessionMode = osuCrypto::SessionMode;
     using Channel     = osuCrypto::Channel;
+
+    // for testing
+    using TestCollection = osuCrypto::TestCollection;
+    using UnitTestFail   = osuCrypto::UnitTestFail;
 }
 
 #define INPUT_TYPE u32

@@ -17,21 +17,18 @@ namespace unbalanced_psi {
         IOService ios;
 
         public:
-        // generate or parse database
-        // generate DDH key
-        // establish network connections
-        Client(const vector<INPUT_TYPE>& inputs); /* hash f, connection details */
+        Client(std::string db_file);
 
-        // do we need this? just run generally
-        void run();
-
-        // encrypt elements in dataset
+        // put together request
         void offline();
 
-        // send elements to server to be exponentiated
-        void round_one();
+        // encrypt dataset and compare
+        void online();
 
-        // do the pir
-        void pir();
+        // compare pir results to online
+        void finalize();
+
+        // write the query indexes to file
+        void to_file(std::string filename);
     };
 }

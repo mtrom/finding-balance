@@ -1,7 +1,9 @@
 #include "utils.h"
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <ostream>
 #include <random>
 #include <string>
 
@@ -42,6 +44,41 @@ namespace unbalanced_psi {
 
         tuple<vector<INPUT_TYPE>,vector<INPUT_TYPE>> datasets(server, client);
         return datasets;
+    }
+
+    /**
+     * write dataset to binary file
+     *
+     * @param <dataset> dataset to write to file
+     * @param <filename> filename to write to
+     */
+    void write_dataset(vector<INPUT_TYPE> dataset, std::string filename) {
+        std::ofstream file(filename, std::ios::out | std::ios::binary);
+        if (!file) {
+            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+        }
+        file.write((const char*) dataset.data(), dataset.size() * sizeof(INPUT_TYPE));
+    }
+
+    /**
+     * write dataset to binary file
+     *
+     * @param <dataset> dataset to write to file
+     * @param <filename> filename to write to
+     */
+    vector<INPUT_TYPE> read_dataset(std::string filename) {
+        std::ifstream file(filename, std::ios::in | std::ios::binary);
+        if (!file) {
+            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+        }
+
+        file.seekg (0, file.end);
+        int bytes = file.tellg();
+        file.seekg (0, file.beg);
+
+        vector<INPUT_TYPE> dataset(bytes / sizeof(INPUT_TYPE));
+        file.read((char*) dataset.data(), bytes);
+        return dataset;
     }
 
     /**

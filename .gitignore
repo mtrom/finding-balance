@@ -17,7 +17,6 @@
 *.dll
 
 # Fortran module files
-*.mod
 *.smod
 
 # Compiled Static libraries
@@ -40,4 +39,8 @@ main
 # cmake extras
 build/*
 
+# executables
 bin/
+
+# program output files
+out/

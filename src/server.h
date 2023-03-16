@@ -11,7 +11,6 @@ namespace unbalanced_psi {
     class Server {
 
         vector<INPUT_TYPE> dataset;
-        vector<Point> encrypted;
         Hashtable hashtable;
 
         Curve curve;
@@ -20,17 +19,18 @@ namespace unbalanced_psi {
         IOService ios;
 
         public:
-        // generate or parse dataset
-        // generate DDH key
-        // establish network connections
-        Server(const vector<INPUT_TYPE>& dataset/* hash fs, connection details, */);
+        Server(std::string db_file);
 
         int size();
 
-        void run();
+        // encrypt dataset
+        void offline();
 
-        // do the pir
-        void pir();
+        // reply to encryption request on client set
+        void online();
+
+        // write hashtable to file
+        void to_file(std::string filename);
 
         private:
         // encrypt an element under our ddh key

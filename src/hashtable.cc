@@ -12,11 +12,11 @@ namespace unbalanced_psi {
     };
 
     Hashtable::Hashtable(std::string filename) {
-        fromfile(filename);
+        from_file(filename);
     };
 
 
-    u64 Hashtable::hash(Point element) {
+    u64 Hashtable::hash(Point element, u64 table_size) {
         // TODO: make a more uniform hash?
         vector<u8> bytes(sizeof(element.sizeBytes()));
         element.toBytes(bytes.data());
@@ -28,11 +28,11 @@ namespace unbalanced_psi {
             output += byte;
         }
 
-        return output % table.size();
+        return output % table_size;
     }
 
     void Hashtable::insert(Point element) {
-        u64 index = hash(element);
+        u64 index = hash(element, table.size());
         table[index].push_back(element);
 
         if (table[index].size() > log2(table.size())) {
@@ -42,8 +42,11 @@ namespace unbalanced_psi {
         size++;
     }
 
+    void Hashtable::pad() {
+        std::cout << "[ hash ] padding" << std::endl;
+    }
 
-    void Hashtable::tofile(std::string filename) {
+    void Hashtable::to_file(std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) {
             throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
@@ -51,7 +54,7 @@ namespace unbalanced_psi {
 
         u64 buckets = table.size();
         u64 filesize = log2(size);
-        std::cout << "[ hash ] writing buckets & size: each " << sizeof(u64) << " bytes" << std::endl;
+        // std::cout << "[ hash ] writing buckets & size: each " << sizeof(u64) << " bytes" << std::endl;
         file.write((const char*) &buckets, sizeof(u64));
         file.write((const char*) &filesize, sizeof(u64));
 
@@ -64,13 +67,15 @@ namespace unbalanced_psi {
                 ptr += Point::size;
             }
         }
+        /*
         std::cout << "[ hash ] writing " << bytes.size()
                   << " bytes: " << to_hex(bytes.data(), bytes.size()) << std::endl;
+        */
         file.write((const char*) bytes.data(), bytes.size());
         file.close();
     }
 
-    void Hashtable::fromfile(std::string filename) {
+    void Hashtable::from_file(std::string filename) {
         std::ifstream file(filename, std::ios::in | std::ios::binary);
         if (!file) {
             throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
@@ -84,14 +89,14 @@ namespace unbalanced_psi {
 
         table.resize(buckets, vector<Point>());
 
-        std::cout << "[ hash ] buckets = " << buckets << ", size = " << filesize << std::endl;
+        // std::cout << "[ hash ] buckets = " << buckets << ", size = " << filesize << std::endl;
 
         vector<u8> bytes(filesize * Point::size);
         file.read((char *) bytes.data(), bytes.size());
 
         u8 *ptr = bytes.data();
         for (auto i = 0; i < filesize; i++) {
-            std::cout << "[ hash ] reading in element #" << i << ": " << to_hex(ptr, Point::size) << std::endl;
+            // std::cout << "[ hash ] reading in element #" << i << ": " << to_hex(ptr, Point::size) << std::endl;
             Point element;
             element.fromBytes(ptr);
             ptr += Point::size;

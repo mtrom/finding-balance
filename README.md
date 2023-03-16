@@ -23,14 +23,14 @@ python3 build.py --install --relic --boost
 cd ..
 cmake -B build/ .
 make -C build/
-./build/bin/main
+./bin/main -flags ...
 ```
 
 Go installation:
 ```bash
 cd go/
 go get github.com/ahenzinger/simplepir
-go build -o ../bin/serverpir server.go
+go build -o bin/serverpir go/server.go
 ```
 
 I think `go get` should be okay now that its in the `go.mod` file.
@@ -46,3 +46,7 @@ Check for memory leaks: `valgrind --leak-check=yes ./main`
 
 SimplePIR uses `uint32_t` from `stdin.h` for its database entries --- see `simplepir/pir/pir.h`.
 
+The `src/tests/test.db` file was generated using:
+```bash
+echo -n -e '\xD2\x04\x00\x00\x40\xE2\x01\x00\x4E\x61\xBC\x00\xD2\x02\x96\x49' > src/tests/test.db
+```

@@ -2,24 +2,28 @@
 
 namespace unbalanced_psi {
 
-    Server::Server(const vector<INPUT_TYPE>& inputs)
-        : dataset(inputs), encrypted(dataset.size()), hashtable(dataset.size()), ios(IOS_THREADS) {
-
+    Server::Server(std::string filename)
+        : dataset(read_dataset(filename)), hashtable(dataset.size()), ios(IOS_THREADS) {
         // randomly sample secret key
         block seed(std::rand()); // TODO: stop using rand()
         PRNG prng(seed);
         key.randomize(prng);
-
-        // hash elements in dataset
-        for (auto i = 0; i < dataset.size(); i++) {
-            encrypted[i] = hash_to_group_element(dataset[i]); // h(x)
-            encrypted[i] = encrypted[i] * key;                // h(x)^a
-
-            hashtable.insert(encrypted[i]);
-        }
     }
 
-    void Server::run() {
+    void Server::offline() {
+        // hash elements in dataset
+        for (auto i = 0; i < dataset.size(); i++) {
+            Point encrypted = hash_to_group_element(dataset[i]); // h(x)
+            encrypted = encrypted * key;                         // h(x)^a
+
+            hashtable.insert(encrypted);
+        }
+
+        // add any required padding
+        hashtable.pad();
+    }
+
+    void Server::online() {
         // set up network connections
         auto ip = std::string("127.0.0.1");
         auto port = 1212;
@@ -45,11 +49,10 @@ namespace unbalanced_psi {
 
         std::cout << "[server] sending response: " << response.size() << std::endl;
         ddh_channel.send(response);
+    }
 
-        hashtable.tofile("bin/server.db");
-        Hashtable readin(hashtable.buckets());
-        readin.fromfile("bin/server.db");
-        std::cout << "readin.size = " << readin.size << std::endl;
+    void Server::to_file(std::string filename) {
+        hashtable.to_file(filename);
     }
 
     int Server::size() {

@@ -12,22 +12,21 @@ namespace unbalanced_psi {
         Hashtable(u64 buckets);
         Hashtable(std::string filename);
 
+        static u64 hash(Point element, u64 table_size);
+
         void insert(Point element);
 
-        void tofile(std::string filename);
+        void to_file(std::string filename);
 
-        void fromfile(std::string filename);
+        void from_file(std::string filename);
+
+        void pad();
 
         u64 buckets();
-
-        std::string to_number(vector<u8> &bytes);
 
         /**
          * @return bucket with most collisions
          */
         int max_bucket();
-
-        private:
-        u64 hash(Point element);
     };
 }

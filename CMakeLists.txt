@@ -15,5 +15,5 @@ find_package(cryptoTools)
 add_executable(main src/main.cc src/client.cc src/server.cc src/utils.cc src/hashtable.cc)
 target_link_libraries(main oc::cryptoTools)
 
-add_executable(tests src/tests/test_hashtable.cc src/utils.cc src/hashtable.cc)
+add_executable(tests src/tests/test_all.cc src/tests/test_utils.cc src/utils.cc)
 target_link_libraries(tests oc::cryptoTools)
