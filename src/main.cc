@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
             parser.get<int>("overlap")
         );
 
-        write_dataset(server, parser.get<std::string>("server_fn"));
-        write_dataset(client, parser.get<std::string>("client_fn"));
+        write_dataset(server, parser.get<std::string>("server-fn"));
+        write_dataset(client, parser.get<std::string>("client-fn"));
     }
 
     return 0;

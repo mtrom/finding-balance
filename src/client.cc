@@ -61,7 +61,7 @@ namespace unbalanced_psi {
         vector<u64> queries(dataset.size());
 
         for (auto i = 0; i < encrypted.size(); i++) {
-            queries[i] = Hashtable::hash(encrypted[i], dataset.size());
+            queries[i] = Hashtable::hash(encrypted[i], 128);
         }
 
         file.write((const char*) queries.data(), queries.size() * sizeof(u64));

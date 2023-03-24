@@ -12,7 +12,6 @@
 #include <cryptoTools/Network/IOService.h>
 
 #define IOS_THREADS 3
-#define MOCK_ELEMENT -1
 
 namespace unbalanced_psi {
 
@@ -53,3 +52,4 @@ namespace unbalanced_psi {
 }
 
 #define INPUT_TYPE u32
+#define MOCK_ELEMENT INPUT_TYPE(-1)

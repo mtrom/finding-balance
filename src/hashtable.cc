@@ -36,14 +36,22 @@ namespace unbalanced_psi {
         table[index].push_back(element);
 
         if (table[index].size() > log2(table.size())) {
-            // throw std::overflow_error("more than log2(size) collisions");
+            throw std::overflow_error("more than log2(size) collisions");
         }
 
         size++;
     }
 
     void Hashtable::pad() {
-        std::cout << "[ hash ] padding" << std::endl;
+        auto before = size;
+        for (u64 i = 0; i < table.size(); i++) {
+            while (table[i].size() < log2(table.size())) {
+                table[i].push_back(hash_to_group_element(MOCK_ELEMENT));
+                size++;
+            }
+        }
+
+        std::cout << "[ hash ] added " << size - before << " mock elements to pad" << std::endl;
     }
 
     void Hashtable::to_file(std::string filename) {
@@ -53,10 +61,12 @@ namespace unbalanced_psi {
         }
 
         u64 buckets = table.size();
-        u64 filesize = log2(size);
-        // std::cout << "[ hash ] writing buckets & size: each " << sizeof(u64) << " bytes" << std::endl;
+        u64 bucket_bytes = table.front().size() * Point::size;
+        std::cout << "[ hash ] writing buckets & size: each "
+            << sizeof(u64) << " bytes: (" << buckets << ", "
+            << bucket_bytes << ")" << std::endl;
         file.write((const char*) &buckets, sizeof(u64));
-        file.write((const char*) &filesize, sizeof(u64));
+        file.write((const char*) &bucket_bytes, sizeof(u64));
 
         vector<u8> bytes(size * Point::size);
         u8 *ptr = bytes.data();
