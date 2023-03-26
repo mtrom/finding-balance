@@ -16,30 +16,21 @@ namespace unbalanced_psi {
     };
 
 
-    u64 Hashtable::hash(Point element, u64 table_size) {
-        // TODO: make a more uniform hash?
-        vector<u8> bytes(sizeof(element.sizeBytes()));
-        element.toBytes(bytes.data());
-
-        u32 output = 0;
-
-        for (u8 byte : bytes) {
-            output = output << 8;
-            output += byte;
-        }
-
+    u64 Hashtable::hash(INPUT_TYPE element, u64 table_size) {
+        block seed(element);
+        PRNG prng(seed);
+        u64 output = prng.get<u64>();
         return output % table_size;
     }
 
-    void Hashtable::insert(Point element) {
+    void Hashtable::insert(INPUT_TYPE element, Point encrypted) {
         u64 index = hash(element, table.size());
-        table[index].push_back(element);
+        table[index].push_back(encrypted);
+        size++;
 
         if (table[index].size() > log2(table.size())) {
             throw std::overflow_error("more than log2(size) collisions");
         }
-
-        size++;
     }
 
     void Hashtable::pad() {
@@ -92,26 +83,28 @@ namespace unbalanced_psi {
         }
 
         u64 buckets;
-        u64 filesize;
+        u64 bucket_bytes;
         file.read((char*) &buckets, sizeof(u64));
-        file.read((char*) &filesize, sizeof(u64));
-        filesize = pow(2, filesize);
+        file.read((char*) &bucket_bytes, sizeof(u64));
+        u64 bucket_size = bucket_bytes / Point::size;
 
+        size = 0;
+        table.clear();
         table.resize(buckets, vector<Point>());
 
         // std::cout << "[ hash ] buckets = " << buckets << ", size = " << filesize << std::endl;
 
-        vector<u8> bytes(filesize * Point::size);
+        vector<u8> bytes(buckets * bucket_bytes);
         file.read((char *) bytes.data(), bytes.size());
 
-        u8 *ptr = bytes.data();
-        for (auto i = 0; i < filesize; i++) {
+        for (u8 *ptr = bytes.data(); ptr < &bytes.back(); ptr += Point::size) {
             // std::cout << "[ hash ] reading in element #" << i << ": " << to_hex(ptr, Point::size) << std::endl;
             Point element;
             element.fromBytes(ptr);
-            ptr += Point::size;
 
-            insert(element);
+            u64 index = size / bucket_size;
+            table[index].push_back(element);
+            size++;
         }
     }
 

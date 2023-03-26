@@ -4,17 +4,17 @@
 
 namespace unbalanced_psi {
     class Hashtable {
-        vector<vector<Point>> table;
 
         public:
+        vector<vector<Point>> table;
         u64 size;
 
         Hashtable(u64 buckets);
         Hashtable(std::string filename);
 
-        static u64 hash(Point element, u64 table_size);
+        static u64 hash(INPUT_TYPE element, u64 table_size);
 
-        void insert(Point element);
+        void insert(INPUT_TYPE element, Point encrypted);
 
         void to_file(std::string filename);
 

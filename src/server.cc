@@ -16,7 +16,7 @@ namespace unbalanced_psi {
             Point encrypted = hash_to_group_element(dataset[i]); // h(x)
             encrypted = encrypted * key;                         // h(x)^a
 
-            hashtable.insert(encrypted);
+            hashtable.insert(dataset[i], encrypted);
         }
 
         // add any required padding
