@@ -51,3 +51,6 @@ The `src/tests/test.db` file was generated using:
 ```bash
 echo -n -e '\xD2\x04\x00\x00\x40\xE2\x01\x00\x4E\x61\xBC\x00\xD2\x02\x96\x49' > src/tests/test.db
 ```
+```bash
+echo -n -e $(cat test.edb.desc | tr -d '\n') > go/test.edb
+```

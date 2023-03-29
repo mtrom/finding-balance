@@ -25,41 +25,6 @@ func printRate(p Params, elapsed time.Duration, batch_sz int) float64 {
 }
 
 /**
- * get the db dimensions given db size and plaintext modulo
- *  modified from pir.Database.ApproxSquareDatabaseDims() to factor in bucket size
- *
- * @param <dbSize> number of entries in the database
- * @param <bucketSize> number of entries per bucket
- * @param <elemBits> number of bits to represent an entry
- * @param <ptMod> plaintext modulo (or p)
- */
-func GetDatabaseDims(dbSize, bucketSize, entryBits, ptMod uint64) (uint64, uint64) {
-
-    ptElems, ptPerEntry, _ := Num_DB_entries(dbSize, entryBits, ptMod)
-
-    bucketSize *= ptPerEntry
-
-    rows := uint64(math.Floor(math.Sqrt(float64(ptElems))))
-
-    // ensure the number of rows per column is a multiple of the bucket size
-    if rows < bucketSize {
-        rows = bucketSize
-    } else if rows % bucketSize > bucketSize / 2 {
-        rows += (bucketSize - (rows % bucketSize))
-    } else {
-        rows -= rows % bucketSize
-    }
-
-    if rows % ptPerEntry != 0 {
-        panic("don't expect this to be possible with proper bucket size")
-    }
-
-	cols := uint64(math.Ceil(float64(ptElems) / float64(rows)))
-
-	return rows, cols
-}
-
-/**
  * get appropriate parameters based on database & lwe information
  *  modified from pir.SimplePIR.PickParams() to factor in bucket size
  *
@@ -128,7 +93,7 @@ func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database) {
         DB_SIZE, BUCKET_SIZE, ENTRY_BITS, SEC_PARAM, LOGQ,
     )
     protocol := SimplePIR{}
-    db       := MakeDB(DB_SIZE, ENTRY_BITS, params, values)
+    db       := CreateDatabase(DB_SIZE, ENTRY_BITS, params, values)
 
     return protocol, params, db
 }
