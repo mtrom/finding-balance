@@ -1,6 +1,8 @@
 package main
 
 import (
+    "fmt"
+
     . "github.com/ahenzinger/simplepir/pir"
 )
 
@@ -40,6 +42,8 @@ func RecoverColumn(
 
     var vals []uint64
 
+    fmt.Printf("len(ans) = %d, offset=%d\n", len(ans.Data), offset)
+
     // recover all Z_p elements in the queried column
     for j := 0; j < len(ans.Data); j++ {
         noised := uint64(ans.Data[j]) + offset
@@ -47,6 +51,12 @@ func RecoverColumn(
         vals = append(vals, denoised)
     }
     ans.MatrixAdd(interm)
+
+    fmt.Printf("values are: ")
+    for _, value := range vals {
+        fmt.Printf("%d, ", value)
+    }
+    fmt.Println()
 
     // recover db entries from Z_p elements
     var column []uint64

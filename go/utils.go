@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bufio"
     "bytes"
     "encoding/binary"
     "fmt"
@@ -53,6 +54,23 @@ func ReadDatabase(filename string) ([]uint64, uint64) {
     return values, bucketSize
 }
 
+func WriteDatabase(filename string, values []uint64) {
+    fmt.Printf("writing %d values to %s\n", len(values), filename)
+    file, err := os.Create(filename)
+    if err != nil { panic(err) }
+    defer file.Close()
+
+    buffer := bufio.NewWriter(file)
+
+    for _, value := range values {
+        if (value == 0) {
+            continue;
+        }
+        binary.Write(buffer, binary.LittleEndian, uint8(value))
+    }
+    buffer.Flush()
+}
+
 func ReadQueries(filename string) []uint64 {
     file, err := os.ReadFile(filename)
     if err != nil { panic(err) }
@@ -76,4 +94,3 @@ func ReadQueries(filename string) []uint64 {
     }
     return queries
 }
-

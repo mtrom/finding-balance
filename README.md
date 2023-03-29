@@ -35,11 +35,12 @@ go build -o bin/serverpir go/server.go
 
 I think `go get` should be okay now that its in the `go.mod` file.
 
-## Open Questions
- - how to call into SimplePIR?
- - can we do an actual stateless server-client architecture rather than two-way communication channel?
-   - how does SimplePIR interact with this?
-
+## TODO
+- give client |X| as a public parameter
+- make client query bucket not element (?)
+- test changes to parameter picking in go
+- save pir response column to file & read in c++
+- make pir communicate over network
 
 ## Notes to Self
 Check for memory leaks: `valgrind --leak-check=yes ./main`

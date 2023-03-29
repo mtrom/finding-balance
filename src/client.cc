@@ -6,8 +6,11 @@
 
 namespace unbalanced_psi {
 
-    Client::Client(std::string filename)
-        : dataset(read_dataset(filename)), encrypted(dataset.size()), ios(IOS_THREADS) {
+    Client::Client(std::string filename, u64 server_size)
+        : dataset(read_dataset(filename)),
+          encrypted(dataset.size()),
+          server_size(server_size),
+          ios(IOS_THREADS) {
         // randomly sample secret key
         block seed(std::rand()); // TODO: stop using rand()
         PRNG prng(seed);
@@ -52,6 +55,37 @@ namespace unbalanced_psi {
         }
     }
 
+    void Client::finalize(std::string filename) {
+        std::cout << "[ client ] finalizing..." << std::endl;
+        std::ifstream file(filename, std::ios::in | std::ios::binary);
+        if (!file) {
+            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+        }
+
+        file.seekg (0, file.end);
+        int filesize = file.tellg();
+        file.seekg (0, file.beg);
+
+        vector<u8> bytes(filesize);
+        file.read((char*) bytes.data(), filesize);
+
+        int found = 0;
+        for (u8 *ptr = bytes.data(); ptr < &bytes.back(); ptr += Point::size) {
+            std::cout << "[ client ] reading in Point: ";
+            std::cout << to_hex(ptr, Point::size) << std::endl;
+            Point result;
+            result.fromBytes(ptr);
+
+            for (Point element : encrypted) {
+                if (element == result) {
+                    found++;
+                }
+            }
+        }
+        std::cout << "[ client ] found " << std::to_string(found);
+        std::cout << " elements in the intersection" << std::endl;
+    }
+
     void Client::to_file(std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) {
@@ -62,7 +96,7 @@ namespace unbalanced_psi {
 
         for (auto i = 0; i < encrypted.size(); i++) {
             // TODO: use correct table size
-            queries[i] = Hashtable::hash(dataset[i], 128);
+            queries[i] = Hashtable::hash(dataset[i], server_size);
         }
 
         file.write((const char*) queries.data(), queries.size() * sizeof(u64));

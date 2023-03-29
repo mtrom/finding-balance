@@ -11,13 +11,16 @@ namespace unbalanced_psi {
         std::vector<INPUT_TYPE> dataset;
         vector<Point> encrypted;
 
+        // size of server's database
+        u64 server_size;
+
         Curve curve;
         Number key;
 
         IOService ios;
 
         public:
-        Client(std::string db_file);
+        Client(std::string db_file, u64 server_size);
 
         // put together request
         void offline();
@@ -26,7 +29,7 @@ namespace unbalanced_psi {
         void online();
 
         // compare pir results to online
-        void finalize();
+        void finalize(std::string filename);
 
         // write the query indexes to file
         void to_file(std::string filename);

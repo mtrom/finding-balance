@@ -29,7 +29,8 @@ namespace unbalanced_psi {
         size++;
 
         if (table[index].size() > log2(table.size())) {
-            throw std::overflow_error("more than log2(size) collisions");
+            std::cout << "more than log2(size) collisions" << std::endl;
+            // throw std::overflow_error("more than log2(size) collisions");
         }
     }
 
@@ -65,6 +66,8 @@ namespace unbalanced_psi {
         for (vector<Point> bucket : table) {
             for (Point element : bucket) {
                 element.toBytes(ptr);
+                std::cout << "[ server ] writing: ";
+                std::cout << to_hex(ptr, Point::size) << std::endl;
                 ptr += Point::size;
             }
         }

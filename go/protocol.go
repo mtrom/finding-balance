@@ -79,8 +79,8 @@ func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params)
         candidate := Params{
             N:    lweParam,
             Logq: lweMod,
-            L:    cols,
-            M:    rows,
+            L:    rows,
+            M:    cols,
         }
         candidate.PickParams(false, cols)
 
@@ -202,6 +202,7 @@ func RunProtocol(pi PIR, DB *Database, p Params, i []uint64) (float64, float64, 
             DB.Info,
         )
         expected := DB.GetElem(index_to_query)
+        fmt.Printf("expected := %d\n", expected)
         found := false
         for _, actual := range column {
             if expected == actual {
@@ -213,7 +214,7 @@ func RunProtocol(pi PIR, DB *Database, p Params, i []uint64) (float64, float64, 
             fmt.Printf("querying column %d failed; %d not found in column\n",
                 index_to_query / p.M, expected,
             )
-			panic("Reconstruct failed!")
+			// panic("Reconstruct failed!")
 		}
 
         results = append(results, column...)

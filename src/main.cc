@@ -13,7 +13,9 @@ void run_both(
         std::string server_in,
         std::string server_out,
         std::string client_in,
-        std::string client_out
+        std::string client_out,
+        std::string answer_fn,
+        u64 server_n
     ) {
 
     std::thread sthread([&server_in, &server_out]() {
@@ -23,11 +25,14 @@ void run_both(
         server.to_file(server_out);
     });
 
-    std::thread cthread([&client_in, &client_out]() {
-        Client client(client_in);
+    std::thread cthread([&client_in, &client_out, &server_n, &answer_fn]() {
+        Client client(client_in, server_n);
         client.offline();
         client.online();
         client.to_file(client_out);
+        if (answer_fn != "") {
+            client.finalize(answer_fn);
+        }
     });
 
     std::cout << "[ main ] waiting on client to finish..." << std::endl;
@@ -47,7 +52,9 @@ int main(int argc, char *argv[]) {
             parser.get<std::string>("server-in"),
             parser.get<std::string>("server-out"),
             parser.get<std::string>("client-in"),
-            parser.get<std::string>("client-out")
+            parser.get<std::string>("client-out"),
+            parser.getOr<std::string>("answer-fn", ""),
+            parser.get<u64>("server-n")
         );
     } else if (parser.isSet("gen-data")) {
         auto [server, client] = generate_datasets(
