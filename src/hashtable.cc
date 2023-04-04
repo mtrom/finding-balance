@@ -36,12 +36,12 @@ namespace unbalanced_psi {
         size++;
 
         if (element == INPUT_TYPE(3759285698)) {
-            std::cout << "[ server ] query for 3759285698 is " << index << std::endl;
-            std::cout << "[ server ] encrypted: " << to_hex(encrypted) << std::endl;
+            std::clog << "[ server ] query for 3759285698 is " << index << std::endl;
+            std::clog << "[ server ] encrypted: " << to_hex(encrypted) << std::endl;
         }
 
         if (table[index].size() > log2(table.size())) {
-            std::cout << "more than log2(size) collisions" << std::endl;
+            std::clog << "more than log2(size) collisions" << std::endl;
             // throw std::overflow_error("more than log2(size) collisions");
         }
     }
@@ -55,7 +55,7 @@ namespace unbalanced_psi {
             }
         }
 
-        std::cout << "[ hash ] added " << size - before << " mock elements to pad" << std::endl;
+        std::clog << "[ hash ] added " << size - before << " mock elements to pad" << std::endl;
     }
 
     void Hashtable::to_file(std::string filename) {
@@ -66,7 +66,7 @@ namespace unbalanced_psi {
 
         u64 buckets = table.size();
         u64 bucket_bytes = table.front().size() * Point::size;
-        std::cout << "[ hash ] writing buckets & size: each "
+        std::clog << "[ hash ] writing buckets & size: each "
             << sizeof(u64) << " bytes: (" << buckets << ", "
             << bucket_bytes << ")" << std::endl;
         file.write((const char*) &buckets, sizeof(u64));
@@ -79,13 +79,13 @@ namespace unbalanced_psi {
             auto bucket = table[i];
             for (Point element : bucket) {
                 element.toBytes(ptr);
-                std::cout << "[ server ] writing (" << i << ")\t:";
-                std::cout << to_hex(ptr, Point::size) << std::endl;
+                std::clog << "[ server ] writing (" << i << ")\t:";
+                std::clog << to_hex(ptr, Point::size) << std::endl;
                 ptr += Point::size;
             }
         }
         /*
-        std::cout << "[ hash ] writing " << bytes.size()
+        std::clog << "[ hash ] writing " << bytes.size()
                   << " bytes: " << to_hex(bytes.data(), bytes.size()) << std::endl;
         */
         file.write((const char*) bytes.data(), bytes.size());
@@ -108,13 +108,13 @@ namespace unbalanced_psi {
         table.clear();
         table.resize(buckets, vector<Point>());
 
-        // std::cout << "[ hash ] buckets = " << buckets << ", size = " << filesize << std::endl;
+        // std::clog << "[ hash ] buckets = " << buckets << ", size = " << filesize << std::endl;
 
         vector<u8> bytes(buckets * bucket_bytes);
         file.read((char *) bytes.data(), bytes.size());
 
         for (u8 *ptr = bytes.data(); ptr < &bytes.back(); ptr += Point::size) {
-            // std::cout << "[ hash ] reading in element #" << i << ": " << to_hex(ptr, Point::size) << std::endl;
+            // std::clog << "[ hash ] reading in element #" << i << ": " << to_hex(ptr, Point::size) << std::endl;
             Point element;
             element.fromBytes(ptr);
 

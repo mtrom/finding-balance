@@ -1,5 +1,5 @@
-set -e
 rm ./out/*
+set -e
 ./bin/datagen --server-n $1 --client-n $2 --overlap $3
 ./bin/offline --client --server-n $1
 ./bin/offline --server

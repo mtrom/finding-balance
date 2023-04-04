@@ -35,11 +35,11 @@ void run_both(
         }
     });
 
-    std::cout << "[ main ] waiting on client to finish..." << std::endl;
+    std::clog << "[ main ] waiting on client to finish..." << std::endl;
     cthread.join();
-    std::cout << "[ main ] waiting on server to finish..." << std::endl;
+    std::clog << "[ main ] waiting on server to finish..." << std::endl;
     sthread.join();
-    std::cout << "[ main ] done." << std::endl;
+    std::clog << "[ main ] done." << std::endl;
 }
 
 

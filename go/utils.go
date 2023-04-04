@@ -4,7 +4,7 @@ import (
     "bufio"
     "bytes"
     "encoding/binary"
-    "fmt"
+    "log"
     "io"
     "os"
 )
@@ -55,7 +55,7 @@ func ReadDatabase(filename string) ([]uint64, uint64) {
 }
 
 func WriteDatabase(filename string, values []uint64) {
-    fmt.Printf("[ go/pir ] writing %d values to %s\n", len(values), filename)
+    log.Printf("[ go/pir ] writing %d values to %s\n", len(values), filename)
     file, err := os.Create(filename)
     if err != nil { panic(err) }
     defer file.Close()

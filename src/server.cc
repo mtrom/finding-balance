@@ -24,7 +24,7 @@ namespace unbalanced_psi {
         // TODO: delete this
         vector<u8> bytes(key.sizeBytes());
         key.toBytes(bytes.data());
-        std::cout << to_hex(bytes.data(), bytes.size()) << std::endl;
+        std::clog << to_hex(bytes.data(), bytes.size()) << std::endl;
     }
 
     void Server::offline() {
@@ -48,12 +48,12 @@ namespace unbalanced_psi {
         Session ddh_session(ios, ip + ':' + std::to_string(port), SessionMode::Server, std::string("ddh_session"));
         Channel ddh_channel = ddh_session.addChannel();
 
-        std::cout << "[server] waiting on request..." << std::endl;
+        std::clog << "[server] waiting on request..." << std::endl;
         ddh_channel.waitForConnection();
 
         vector<u8> request;
         ddh_channel.recv(request);
-        std::cout << "[server] request recieved: " << request.size() << std::endl;
+        std::clog << "[server] request recieved: " << request.size() << std::endl;
 
         vector<u8> response(request.size());
 
@@ -64,7 +64,7 @@ namespace unbalanced_psi {
             point.toBytes(response.data() + (i * point.sizeBytes()));
         }
 
-        std::cout << "[server] sending response: " << response.size() << std::endl;
+        std::clog << "[server] sending response: " << response.size() << std::endl;
         ddh_channel.send(response);
     }
 

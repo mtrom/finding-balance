@@ -1,11 +1,12 @@
 package main
 
 import (
-	"runtime"
-	"runtime/debug"
-	"time"
     "fmt"
+    "log"
     "math"
+    "runtime"
+    "runtime/debug"
+    "time"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
@@ -54,7 +55,8 @@ func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params)
                 // we don't expect this to be possible
                 panic("could not find tight params")
             }
-            params.PrintParams()
+            // TODO: debug log these
+            // params.PrintParams()
             return params
         }
 
@@ -88,7 +90,7 @@ func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database, uint64) {
 
     // number of `elements' in database
     db_size := uint64(len(values))
-    fmt.Printf("[ go/pir ] DB_SIZE = %d\n", db_size)
+    log.Printf("[ go/pir ] DB_SIZE = %d\n", db_size)
 
     params := GetParams(
         db_size, bucket_size, ENTRY_BITS, SEC_PARAM, LOGQ,
@@ -117,14 +119,20 @@ func RunProtocol(
     bucketSize uint64,
 ) ([]uint64) {
 
+    start := time.Now()
     // sample lwe random matrix A
     shared_state := protocol.Init(db.Info, params)
 
     // calculate hint
     server_state, offline := protocol.Setup(db, shared_state, params)
+    elapsed := time.Since(start)
+	comm := float64(offline.Size() * uint64(params.Logq) / (8.0 * 1024.0))
+    fmt.Printf("[ go/pir ] offline:\t%dms,\t%.2fKB\n", elapsed / 1000000, comm)
 
     var results []uint64
     queried := map[uint64]struct{}{}
+    start = time.Now()
+    comm = float64(0)
     for _, col := range queries {
 
         // protocol.Query(...) takes an index that is modulo'd by the width,
@@ -145,19 +153,21 @@ func RunProtocol(
             queried[translated] = struct{}{}
         }
 
-        fmt.Printf("[ go/pir ] querying column %d\n", translated)
+        log.Printf("[ go/pir ] querying column %d\n", translated)
 
         // create query vector
         client_state, query := protocol.Query(translated, shared_state, params, db.Info)
 
         // original protocol supported batch querying so need to put query in a slice
         querySlice := MakeMsgSlice(query)
+        comm += float64(querySlice.Size() * uint64(params.Logq) / (8.0 * 1024.0))
 
-        fmt.Printf("[ go/pir ] db size   : %d x %d\n", db.Data.Rows, db.Data.Cols)
-        fmt.Printf("[ go/pir ] query size: %d x %d\n", query.Data[0].Rows, query.Data[0].Cols)
+        log.Printf("[ go/pir ] db size   : %d x %d\n", db.Data.Rows, db.Data.Cols)
+        log.Printf("[ go/pir ] query size: %d x %d\n", query.Data[0].Rows, query.Data[0].Cols)
 
         // create answer vector
         answer := protocol.Answer(db, querySlice, server_state, shared_state, params)
+        comm += float64(answer.Size() * uint64(params.Logq) / (8.0 * 1024.0))
 
         // recover all values in the queried column
         protocol.Reset(db, params)
@@ -176,6 +186,8 @@ func RunProtocol(
         db.Data.Add(params.P / 2)
         db.Squish()
     }
+    elapsed = time.Since(start)
+    fmt.Printf("[ go/pir ] online:\t%dms,\t%.2fKB\n", elapsed / 1000000, comm)
 
     protocol.Reset(db, params)
 
