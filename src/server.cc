@@ -2,12 +2,29 @@
 
 namespace unbalanced_psi {
 
-    Server::Server(std::string filename)
-        : dataset(read_dataset(filename)), hashtable(dataset.size()), ios(IOS_THREADS) {
+    /**
+     * @param <filename> input file for dataset
+     * @param <encrypted> true if the data is already encrypted
+     * @param <seed> seed for randomness in selecting private key
+     */
+    Server::Server(std::string filename, bool encrypted, uint64_t seed) : ios(IOS_THREADS) {
         // randomly sample secret key
-        block seed(std::rand()); // TODO: stop using rand()
-        PRNG prng(seed);
+        // TODO: something better than a set seed?
+        block bseed(seed);
+        PRNG prng(bseed);
         key.randomize(prng);
+
+        if (!encrypted) {
+            dataset = read_dataset(filename);
+            hashtable.resize(dataset.size());
+        } else {
+            hashtable.from_file(filename);
+        }
+
+        // TODO: delete this
+        vector<u8> bytes(key.sizeBytes());
+        key.toBytes(bytes.data());
+        std::cout << to_hex(bytes.data(), bytes.size()) << std::endl;
     }
 
     void Server::offline() {

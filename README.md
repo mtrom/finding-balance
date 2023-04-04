@@ -1,5 +1,17 @@
 # Unbalanced PSI from SimplePIR
 
+## Use
+
+```bash
+./bin/datagen --server-n |X| --client-n |Y| --overlap ?
+./bin/offline --client --database out/server.db
+./bin/offline --server --database out/client.db
+./bin/pir --database out/server.edb --queries out/queries.db
+./bin/online --server out/server.edb
+./bin/online --client out/client.db
+```
+
+
 ## Build
 
 Install OpenSSL:
@@ -36,11 +48,10 @@ go build -o bin/serverpir go/server.go
 I think `go get` should be okay now that its in the `go.mod` file.
 
 ## TODO
-- give client |X| as a public parameter
-- make client query bucket not element (?)
 - test changes to parameter picking in go
-- save pir response column to file & read in c++
 - make pir communicate over network
+- fix padding elements
+- record timings
 
 ## Notes to Self
 Check for memory leaks: `valgrind --leak-check=yes ./main`

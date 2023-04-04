@@ -55,7 +55,7 @@ func ReadDatabase(filename string) ([]uint64, uint64) {
 }
 
 func WriteDatabase(filename string, values []uint64) {
-    fmt.Printf("writing %d values to %s\n", len(values), filename)
+    fmt.Printf("[ go/pir ] writing %d values to %s\n", len(values), filename)
     file, err := os.Create(filename)
     if err != nil { panic(err) }
     defer file.Close()
@@ -63,9 +63,11 @@ func WriteDatabase(filename string, values []uint64) {
     buffer := bufio.NewWriter(file)
 
     for _, value := range values {
+        /* why???
         if (value == 0) {
             continue;
         }
+        */
         binary.Write(buffer, binary.LittleEndian, uint8(value))
     }
     buffer.Flush()
@@ -76,8 +78,6 @@ func ReadQueries(filename string) []uint64 {
     if err != nil { panic(err) }
 
     reader := bytes.NewReader(file)
-
-    fmt.Printf("queries: ")
 
     var queries []uint64
     for {
@@ -90,7 +90,6 @@ func ReadQueries(filename string) []uint64 {
         }
 
         queries = append(queries, index)
-        fmt.Printf("%d, ", index)
     }
     return queries
 }

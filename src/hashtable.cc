@@ -7,14 +7,21 @@
 
 namespace unbalanced_psi {
 
+    Hashtable::Hashtable() : size(0) {
+    }
+
     Hashtable::Hashtable(u64 buckets) : size(0) {
-        table.resize(buckets, vector<Point>());
+        resize(buckets);
     };
 
     Hashtable::Hashtable(std::string filename) {
         from_file(filename);
     };
 
+    void Hashtable::resize(u64 buckets) {
+        table.clear();
+        table.resize(buckets, vector<Point>());
+    }
 
     u64 Hashtable::hash(INPUT_TYPE element, u64 table_size) {
         block seed(element);
@@ -27,6 +34,11 @@ namespace unbalanced_psi {
         u64 index = hash(element, table.size());
         table[index].push_back(encrypted);
         size++;
+
+        if (element == INPUT_TYPE(3759285698)) {
+            std::cout << "[ server ] query for 3759285698 is " << index << std::endl;
+            std::cout << "[ server ] encrypted: " << to_hex(encrypted) << std::endl;
+        }
 
         if (table[index].size() > log2(table.size())) {
             std::cout << "more than log2(size) collisions" << std::endl;
@@ -63,10 +75,11 @@ namespace unbalanced_psi {
         vector<u8> bytes(size * Point::size);
         u8 *ptr = bytes.data();
 
-        for (vector<Point> bucket : table) {
+        for (auto i = 0; i < table.size(); i++) {
+            auto bucket = table[i];
             for (Point element : bucket) {
                 element.toBytes(ptr);
-                std::cout << "[ server ] writing: ";
+                std::cout << "[ server ] writing (" << i << ")\t:";
                 std::cout << to_hex(ptr, Point::size) << std::endl;
                 ptr += Point::size;
             }

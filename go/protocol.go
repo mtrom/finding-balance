@@ -72,9 +72,9 @@ func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params)
  *  element, but only makes up part of it
  *
  * @param <dbFn> filename for the database
- * @returns protocol, database, & parameters
+ * @returns protocol, database, & parameters (& bucket size in bytes)
  */
-func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database) {
+func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database, uint64) {
 
     // LWE params
     const LOGQ = uint64(32)
@@ -84,23 +84,106 @@ func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database) {
     const ENTRY_BITS = uint64(8)
 
     // raw binary database
-    values, BUCKET_SIZE := ReadDatabase(dbFn)
+    values, bucket_size := ReadDatabase(dbFn)
 
     // number of `elements' in database
-    DB_SIZE := uint64(len(values))
+    db_size := uint64(len(values))
+    fmt.Printf("[ go/pir ] DB_SIZE = %d\n", db_size)
 
     params := GetParams(
-        DB_SIZE, BUCKET_SIZE, ENTRY_BITS, SEC_PARAM, LOGQ,
+        db_size, bucket_size, ENTRY_BITS, SEC_PARAM, LOGQ,
     )
     protocol := SimplePIR{}
-    db       := CreateDatabase(DB_SIZE, ENTRY_BITS, params, values)
+    db       := CreateDatabase(db_size, ENTRY_BITS, params, values)
 
-    return protocol, params, db
+    return protocol, params, db, bucket_size
 }
 
+// mostly taken straight from their impl
+/**
+ * run protocol on given database and return the results
+ *
+ * @param <protocol> SimplePIR object
+ * @param <db> server's database
+ * @param <params> protcol parameters
+ * @param <queries> client's queries as the hash value of an elemnet
+ * @param <bucketSize> number of buckets for hash value
+ */
+func RunProtocol(
+    protocol PIR,
+    db *Database,
+    params Params,
+    queries []uint64,
+    bucketSize uint64,
+) ([]uint64) {
+
+    // sample lwe random matrix A
+    shared_state := protocol.Init(db.Info, params)
+
+    // calculate hint
+    server_state, offline := protocol.Setup(db, shared_state, params)
+
+    var results []uint64
+    queried := map[uint64]struct{}{}
+    for _, col := range queries {
+
+        // protocol.Query(...) takes an index that is modulo'd by the width,
+        // so we need to translate our hash value to a value column value
+        translated := col / (params.L / bucketSize)
+        translated = translated % params.L;
+
+        // protocol.Query(...) does this modulo so if it changes our translation
+        // the column will be incorrect
+        if translated % params.M != translated {
+            panic("[FAILURE] CAN'T TRANSLATE BETWEEN M & L");
+        }
+
+        // don't query the same column twice
+        if _, already_queried := queried[translated]; already_queried {
+            continue;
+        } else {
+            queried[translated] = struct{}{}
+        }
+
+        fmt.Printf("[ go/pir ] querying column %d\n", translated)
+
+        // create query vector
+        client_state, query := protocol.Query(translated, shared_state, params, db.Info)
+
+        // original protocol supported batch querying so need to put query in a slice
+        querySlice := MakeMsgSlice(query)
+
+        fmt.Printf("[ go/pir ] db size   : %d x %d\n", db.Data.Rows, db.Data.Cols)
+        fmt.Printf("[ go/pir ] query size: %d x %d\n", query.Data[0].Rows, query.Data[0].Cols)
+
+        // create answer vector
+        answer := protocol.Answer(db, querySlice, server_state, shared_state, params)
+
+        // recover all values in the queried column
+        protocol.Reset(db, params)
+        column := RecoverColumn(
+            offline,
+            querySlice.Data[0],
+            answer,
+            shared_state,
+            client_state,
+            params,
+            db.Info,
+        )
+        results = append(results, column...)
+
+        // reverses the db.Reset(...) without having to run setup
+        db.Data.Add(params.P / 2)
+        db.Squish()
+    }
+
+    protocol.Reset(db, params)
+
+    return results
+}
 
 // mostly taken straight from their impl
-func RunProtocol(pi PIR, DB *Database, p Params, i []uint64) (float64, float64, []uint64) {
+func RunFullProtocol(pi PIR, DB *Database, p Params, i []uint64) (float64, float64, []uint64) {
 	fmt.Printf("Executing %s\n", pi.Name())
 	//fmt.Printf("Memory limit: %d\n", debug.SetMemoryLimit(math.MaxInt64))
 	debug.SetGCPercent(-1)

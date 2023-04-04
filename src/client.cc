@@ -6,10 +6,10 @@
 
 namespace unbalanced_psi {
 
-    Client::Client(std::string filename, u64 server_size)
+    Client::Client(std::string filename)
         : dataset(read_dataset(filename)),
           encrypted(dataset.size()),
-          server_size(server_size),
+          queries(dataset.size()),
           ios(IOS_THREADS) {
         // randomly sample secret key
         block seed(std::rand()); // TODO: stop using rand()
@@ -17,15 +17,27 @@ namespace unbalanced_psi {
         key.randomize(prng);
     }
 
-    void Client::offline() {
-        // hash elements in dataset
-        for (auto i = 0; i < dataset.size(); i++) {
-            encrypted[i] = hash_to_group_element(dataset[i]); // h(y)
-            encrypted[i] = encrypted[i] * key;                // h(y)^b
+    void Client::offline(u64 server_size) {
+        // determine which columns to query
+        for (auto i = 0; i < encrypted.size(); i++) {
+            // TODO: use correct table size
+            std::cout << "[ client ] query for " << dataset[i];
+            queries[i] = Hashtable::hash(dataset[i], server_size);
+            std::cout << " is " << queries[i] << std::endl;
         }
+
     }
 
     void Client::online() {
+        // TODO: should this be offline as well? two offlines?
+        // hash elements in dataset
+        for (auto i = 0; i < dataset.size(); i++) {
+            encrypted[i] = hash_to_group_element(dataset[i]); // h(y)
+            std::cout << "[ client ] h(y): " << to_hex(encrypted[i]) << std::endl;
+            encrypted[i] = encrypted[i] * key;                // h(y)^b
+            std::cout << "[ client ] h(y)^b: " << to_hex(encrypted[i]) << std::endl;
+        }
+
         // set up network connections
         auto ip = std::string("127.0.0.1");
         auto port = 1212;
@@ -36,11 +48,11 @@ namespace unbalanced_psi {
 
         std::cout << "[client] sending request..." << std::endl;
 
-        vector<u8> request(encrypted[0].sizeBytes() * encrypted.size());
+        vector<u8> request(encrypted.size() * Point::size);
         auto iter = request.data();
         for (Point element : encrypted) {
             element.toBytes(iter);
-            iter += element.sizeBytes();
+            iter += Point::size;
         }
         ddh_channel.send(request);
 
@@ -51,7 +63,9 @@ namespace unbalanced_psi {
 
 
         for (auto i = 0; i < encrypted.size(); i++) {
-            encrypted[i].fromBytes(response.data() + (i * encrypted[i].sizeBytes()));
+            std::cout << "[ client ] received h(y)^ab: ";
+            std::cout << to_hex(response.data() + (i * Point::size), Point::size) << std::endl;
+            encrypted[i].fromBytes(response.data() + (i * Point::size));
         }
     }
 
@@ -74,7 +88,8 @@ namespace unbalanced_psi {
             std::cout << "[ client ] reading in Point: ";
             std::cout << to_hex(ptr, Point::size) << std::endl;
             Point result;
-            result.fromBytes(ptr);
+            result.fromBytes(ptr); // h(x)^a
+            result = result * key; // h(x)^ab
 
             for (Point element : encrypted) {
                 if (element == result) {
@@ -90,13 +105,6 @@ namespace unbalanced_psi {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) {
             throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
-        }
-
-        vector<u64> queries(dataset.size());
-
-        for (auto i = 0; i < encrypted.size(); i++) {
-            // TODO: use correct table size
-            queries[i] = Hashtable::hash(dataset[i], server_size);
         }
 
         file.write((const char*) queries.data(), queries.size() * sizeof(u64));

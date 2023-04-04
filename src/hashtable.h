@@ -9,8 +9,11 @@ namespace unbalanced_psi {
         vector<vector<Point>> table;
         u64 size;
 
+        Hashtable();
         Hashtable(u64 buckets);
         Hashtable(std::string filename);
+
+        void resize(u64 buckets);
 
         static u64 hash(INPUT_TYPE element, u64 table_size);
 

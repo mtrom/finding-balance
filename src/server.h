@@ -19,7 +19,12 @@ namespace unbalanced_psi {
         IOService ios;
 
         public:
-        Server(std::string db_file);
+
+        Server(
+            std::string db_file,
+            bool encrypted = false,
+            uint64_t seed = uint64_t(406)
+        );
 
         int size();
 

@@ -108,6 +108,15 @@ namespace unbalanced_psi {
     }
 
     /**
+     * convert a Point into a hex string for debugging
+     */
+    std::string to_hex(Point point) {
+        vector<u8> bytes(Point::size);
+        point.toBytes(bytes.data());
+        return to_hex(bytes.data(), bytes.size());
+    }
+
+    /**
      * convert a byte vector into a hex string for debugging
      */
     std::string to_hex(u8 *bytes, u64 size) {

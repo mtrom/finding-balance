@@ -10,9 +10,7 @@ namespace unbalanced_psi {
 
         std::vector<INPUT_TYPE> dataset;
         vector<Point> encrypted;
-
-        // size of server's database
-        u64 server_size;
+        vector<u64> queries;
 
         Curve curve;
         Number key;
@@ -20,10 +18,10 @@ namespace unbalanced_psi {
         IOService ios;
 
         public:
-        Client(std::string db_file, u64 server_size);
+        Client(std::string db_file);
 
         // put together request
-        void offline();
+        void offline(u64 server_size);
 
         // encrypt dataset and compare
         void online();
