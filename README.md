@@ -51,7 +51,9 @@ I think `go get` should be okay now that its in the `go.mod` file.
 - test changes to parameter picking in go
 - make pir communicate over network
 - fix padding elements
-- record timings
+- random seeds aren't very random
+- cuckoo hashing for multiple queries?
+- randomly permute elements in hashtable (or sort?)
 
 ## Notes to Self
 Check for memory leaks: `valgrind --leak-check=yes ./main`

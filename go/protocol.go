@@ -3,27 +3,10 @@ package main
 import (
     "fmt"
     "log"
-    "math"
-    "runtime"
-    "runtime/debug"
     "time"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
-
-
-func printTime(start time.Time) time.Duration {
-	elapsed := time.Since(start)
-	fmt.Printf("\tElapsed: %s\n", elapsed)
-	return elapsed
-}
-
-func printRate(p Params, elapsed time.Duration, batch_sz int) float64 {
-	rate := math.Log2(float64((p.P))) * float64(p.L*p.M) * float64(batch_sz) /
-		float64(8*1024*1024*elapsed.Seconds())
-	fmt.Printf("\tRate: %f MB/s\n", rate)
-	return rate
-}
 
 /**
  * get appropriate parameters based on database & lwe information
@@ -101,7 +84,6 @@ func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database, uint64) {
     return protocol, params, db, bucket_size
 }
 
-// mostly taken straight from their impl
 /**
  * run protocol on given database and return the results
  *
@@ -132,19 +114,21 @@ func RunProtocol(
     var results []uint64
     queried := map[uint64]struct{}{}
     start = time.Now()
+    elapsedQuery := time.Since(start)
+    elapsedAnswer := time.Since(start)
+    elapsedRecover := time.Since(start)
     comm = float64(0)
     for _, col := range queries {
-
-        // protocol.Query(...) takes an index that is modulo'd by the width,
-        // so we need to translate our hash value to a value column value
+        // translate the hash value into the column by dividing by the number
+        // of buckets per column
         translated := col / (params.L / bucketSize)
-        translated = translated % params.L;
 
-        // protocol.Query(...) does this modulo so if it changes our translation
-        // the column will be incorrect
+        // this should not happen
         if translated % params.M != translated {
-            panic("[FAILURE] CAN'T TRANSLATE BETWEEN M & L");
+            panic("our translated query larger then the number of columns")
         }
+
+        log.Printf("[ go/pir ] translated query %d to %d\n", col, translated)
 
         // don't query the same column twice
         if _, already_queried := queried[translated]; already_queried {
@@ -156,21 +140,25 @@ func RunProtocol(
         log.Printf("[ go/pir ] querying column %d\n", translated)
 
         // create query vector
+        startQuery := time.Now()
         client_state, query := protocol.Query(translated, shared_state, params, db.Info)
 
         // original protocol supported batch querying so need to put query in a slice
         querySlice := MakeMsgSlice(query)
+        elapsedQuery += time.Since(startQuery)
         comm += float64(querySlice.Size() * uint64(params.Logq) / (8.0 * 1024.0))
 
         log.Printf("[ go/pir ] db size   : %d x %d\n", db.Data.Rows, db.Data.Cols)
         log.Printf("[ go/pir ] query size: %d x %d\n", query.Data[0].Rows, query.Data[0].Cols)
 
         // create answer vector
+        startAnswer := time.Now()
         answer := protocol.Answer(db, querySlice, server_state, shared_state, params)
+        elapsedAnswer += time.Since(startAnswer)
         comm += float64(answer.Size() * uint64(params.Logq) / (8.0 * 1024.0))
 
         // recover all values in the queried column
-        protocol.Reset(db, params)
+        startRecover := time.Now()
         column := RecoverColumn(
             offline,
             querySlice.Data[0],
@@ -181,108 +169,16 @@ func RunProtocol(
             db.Info,
         )
         results = append(results, column...)
-
-        // reverses the db.Reset(...) without having to run setup
-        db.Data.Add(params.P / 2)
-        db.Squish()
+        elapsedRecover += time.Since(startRecover)
     }
     elapsed = time.Since(start)
+
+    fmt.Printf("[ go/pir ] query:\t%dms\n", elapsedQuery / 1000000)
+    fmt.Printf("[ go/pir ] answer:\t%dms\n", elapsedAnswer / 1000000)
+    fmt.Printf("[ go/pir ] recover:\t%dms\n", elapsedRecover / 1000000)
     fmt.Printf("[ go/pir ] online:\t%dms,\t%.2fKB\n", elapsed / 1000000, comm)
 
     protocol.Reset(db, params)
 
     return results
-}
-
-// mostly taken straight from their impl
-func RunFullProtocol(pi PIR, DB *Database, p Params, i []uint64) (float64, float64, []uint64) {
-	fmt.Printf("Executing %s\n", pi.Name())
-	//fmt.Printf("Memory limit: %d\n", debug.SetMemoryLimit(math.MaxInt64))
-	debug.SetGCPercent(-1)
-
-	num_queries := uint64(len(i))
-	if DB.Data.Rows/num_queries < DB.Info.Ne {
-		panic("Too many queries to handle!")
-	}
-	batch_sz := DB.Data.Rows / (DB.Info.Ne * num_queries) * DB.Data.Cols
-	bw := float64(0)
-
-	shared_state := pi.Init(DB.Info, p)
-
-	fmt.Println("Setup...")
-	start := time.Now()
-	server_state, offline_download := pi.Setup(DB, shared_state, p)
-	printTime(start)
-	comm := float64(offline_download.Size() * uint64(p.Logq) / (8.0 * 1024.0))
-	fmt.Printf("\t\tOffline download: %f KB\n", comm)
-	bw += comm
-	runtime.GC()
-
-	fmt.Println("Building query...")
-	start = time.Now()
-	var client_state []State
-	var query MsgSlice
-	for index, _ := range i {
-		index_to_query := i[index] + uint64(index)*batch_sz
-		cs, q := pi.Query(index_to_query, shared_state, p, DB.Info)
-		client_state = append(client_state, cs)
-		query.Data = append(query.Data, q)
-	}
-	runtime.GC()
-	printTime(start)
-	comm = float64(query.Size() * uint64(p.Logq) / (8.0 * 1024.0))
-	fmt.Printf("\t\tOnline upload: %f KB\n", comm)
-	bw += comm
-	runtime.GC()
-
-	fmt.Println("Answering query...")
-	start = time.Now()
-	answer := pi.Answer(DB, query, server_state, shared_state, p)
-	elapsed := printTime(start)
-	rate := printRate(p, elapsed, len(i))
-	comm = float64(answer.Size() * uint64(p.Logq) / (8.0 * 1024.0))
-	fmt.Printf("\t\tOnline download: %f KB\n", comm)
-	bw += comm
-	runtime.GC()
-
-	pi.Reset(DB, p)
-	fmt.Println("Reconstructing...")
-	start = time.Now()
-
-    var results []uint64 = make([]uint64, len(i))
-    for index, _ := range i {
-        index_to_query := i[index] + uint64(index) * batch_sz
-        column := RecoverColumn(
-            offline_download,
-            query.Data[index],
-            answer,
-            shared_state,
-            client_state[index],
-            p,
-            DB.Info,
-        )
-        expected := DB.GetElem(index_to_query)
-        fmt.Printf("expected := %d\n", expected)
-        found := false
-        for _, actual := range column {
-            if expected == actual {
-                found = true
-            }
-        }
-
-		if !found {
-            fmt.Printf("querying column %d failed; %d not found in column\n",
-                index_to_query / p.M, expected,
-            )
-			// panic("Reconstruct failed!")
-		}
-
-        results = append(results, column...)
-	}
-	fmt.Println("Success!")
-	printTime(start)
-
-	runtime.GC()
-	debug.SetGCPercent(100)
-	return rate, bw, results
 }

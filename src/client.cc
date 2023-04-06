@@ -92,9 +92,12 @@ namespace unbalanced_psi {
             Point result;
             result.fromBytes(ptr); // h(x)^a
             result = result * key; // h(x)^ab
+            std::clog << "            (and encrypted): ";
+            std::clog << to_hex(result) << std::endl;
 
             for (Point element : encrypted) {
                 if (element == result) {
+                    std::clog << "[ client ] found: " << to_hex(element) << std::endl;
                     found++;
                 }
             }

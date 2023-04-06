@@ -38,10 +38,10 @@ int main(int argc, char *argv[]) {
         auto start = high_resolution_clock::now();
         server.offline();
         auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<nanoseconds>(stop - start);
+        auto duration = duration_cast<milliseconds>(stop - start);
         server.to_file(output);
 
-        std::cout <<  "[ server ] offline:\t" << duration.count() << "ns" << std::endl;
+        std::cout <<  "[ server ] offline:\t" << duration.count() << "ms" << std::endl;
 
         return 0;
     } else {

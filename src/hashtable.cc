@@ -35,11 +35,6 @@ namespace unbalanced_psi {
         table[index].push_back(encrypted);
         size++;
 
-        if (element == INPUT_TYPE(3759285698)) {
-            std::clog << "[ server ] query for 3759285698 is " << index << std::endl;
-            std::clog << "[ server ] encrypted: " << to_hex(encrypted) << std::endl;
-        }
-
         if (table[index].size() > log2(table.size())) {
             std::clog << "more than log2(size) collisions" << std::endl;
             // throw std::overflow_error("more than log2(size) collisions");

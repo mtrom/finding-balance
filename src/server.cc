@@ -1,4 +1,8 @@
+#include <cmath>
+
 #include "server.h"
+
+using namespace std::chrono;
 
 namespace unbalanced_psi {
 
@@ -28,16 +32,34 @@ namespace unbalanced_psi {
     }
 
     void Server::offline() {
+        float average(0);
         // hash elements in dataset
         for (auto i = 0; i < dataset.size(); i++) {
+            auto start = high_resolution_clock::now();
+
+            std::clog << "[ server ] element " << dataset[i];
             Point encrypted = hash_to_group_element(dataset[i]); // h(x)
             encrypted = encrypted * key;                         // h(x)^a
+            std::clog << " is " << to_hex(encrypted) << std::endl;
 
             hashtable.insert(dataset[i], encrypted);
+
+            auto stop = high_resolution_clock::now();
+            auto duration = duration_cast<milliseconds>(stop - start);
+            average += duration.count();
         }
+        std::cout << "[ server ] avg insert:\t";
+        std::cout << average / float(dataset.size()) << "ms" << std::endl;
+
+        std::cout << "[ server ] pad size:\t" << hashtable.max_bucket();
+        std::cout << " vs. " << log2(dataset.size()) << std::endl;
 
         // add any required padding
+        auto start = high_resolution_clock::now();
         hashtable.pad();
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(stop - start);
+        std::cout << "[ server ] padding:\t" << duration.count() << "ms" << std::endl;
     }
 
     void Server::online() {
