@@ -43,9 +43,14 @@ namespace unbalanced_psi {
 
     void Hashtable::pad() {
         auto before = size;
+
+        block seed(PADDING_SEED);
+        PRNG prng(seed);
+
         for (u64 i = 0; i < table.size(); i++) {
-            while (table[i].size() < log2(table.size())) {
-                table[i].push_back(hash_to_group_element(MOCK_ELEMENT));
+            while (table[i].size() < bucket_size) {
+                Point random_element(prng);
+                table[i].push_back(random_element);
                 size++;
             }
         }

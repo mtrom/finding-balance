@@ -11,6 +11,7 @@
 #include <cryptoTools/Network/Endpoint.h>
 #include <cryptoTools/Network/IOService.h>
 
+#define PADDING_SEED 1986
 #define IOS_THREADS 3
 
 namespace unbalanced_psi {
