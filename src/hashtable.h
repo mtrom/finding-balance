@@ -25,7 +25,13 @@ namespace unbalanced_psi {
 
         void pad();
 
+        void pad(u64 min_bucket, u64 max_bucket);
+
         u64 buckets();
+
+        void concat(Hashtable other);
+
+        void log();
 
         /**
          * @return bucket with most collisions

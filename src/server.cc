@@ -31,36 +31,66 @@ namespace unbalanced_psi {
         std::clog << to_hex(bytes.data(), bytes.size()) << std::endl;
     }
 
+#if OFFLINE_THREADS == 1
     void Server::offline() {
-        float average(0);
         // hash elements in dataset
         for (auto i = 0; i < dataset.size(); i++) {
-            auto start = high_resolution_clock::now();
-
-            std::clog << "[ server ] element " << dataset[i];
             Point encrypted = hash_to_group_element(dataset[i]); // h(x)
             encrypted = encrypted * key;                         // h(x)^a
-            std::clog << " is " << to_hex(encrypted) << std::endl;
 
             hashtable.insert(dataset[i], encrypted);
-
-            auto stop = high_resolution_clock::now();
-            auto duration = duration_cast<milliseconds>(stop - start);
-            average += duration.count();
         }
-        std::cout << "[ server ] avg insert:\t";
-        std::cout << average / float(dataset.size()) << "ms" << std::endl;
-
-        std::cout << "[ server ] pad size:\t" << hashtable.max_bucket();
-        std::cout << " vs. " << log2(dataset.size()) << std::endl;
-
         // add any required padding
-        auto start = high_resolution_clock::now();
         hashtable.pad();
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<milliseconds>(stop - start);
-        std::cout << "[ server ] padding:\t" << duration.count() << "ms" << std::endl;
     }
+#else
+    void Server::offline() {
+        std::future<Hashtable> futures[OFFLINE_THREADS];
+
+        for (auto i = 0; i < OFFLINE_THREADS; i++) {
+            u64 min_bucket = i * (hashtable.buckets() / OFFLINE_THREADS);
+            u64 max_bucket = (i + 1) * (hashtable.buckets() / OFFLINE_THREADS);
+            futures[i] = std::async(&Server::partial_offline, this, min_bucket, max_bucket);
+            std::clog << "[ thread" << i << " ] from " << min_bucket << " to " << max_bucket << std::endl;
+        }
+
+        for (auto i = 0; i < OFFLINE_THREADS; i++) {
+            Hashtable other = futures[i].get();
+            std::clog << "[ thread" << i << " ] got our table of size " << other.size << std::endl;
+            hashtable.concat(other);
+        }
+
+        for (u64 i = 0; i < hashtable.buckets(); i++) {
+            if (hashtable.table[i].size() != log2(dataset.size())) {
+                std::cerr << "padding failure " << hashtable.table[i].size() << "\n";
+                throw std::runtime_error("padding failure");
+            }
+        }
+    }
+
+    Hashtable Server::partial_offline(u64 min_bucket, u64 max_bucket) {
+
+        Curve c;
+
+        Hashtable ht(hashtable.buckets());
+
+        // hash elements in dataset
+        for (auto i = 0; i < dataset.size(); i++) {
+            auto hash = Hashtable::hash(dataset[i], hashtable.buckets());
+            if (min_bucket <= hash && hash < max_bucket) {
+                Point encrypted = hash_to_group_element(dataset[i]); // h(x)
+                encrypted = encrypted * key;                         // h(x)^a
+
+                ht.insert(dataset[i], encrypted);
+            }
+        }
+        // add any required padding
+        ht.pad(min_bucket, max_bucket);
+
+        return ht;
+    }
+#endif
+
 
     void Server::online() {
         // set up network connections

@@ -41,14 +41,14 @@ namespace unbalanced_psi {
         }
     }
 
-    void Hashtable::pad() {
+    void Hashtable::pad(u64 min_bucket, u64 max_bucket) {
         auto before = size;
 
         block seed(PADDING_SEED);
         PRNG prng(seed);
 
-        for (u64 i = 0; i < table.size(); i++) {
-            while (table[i].size() < bucket_size) {
+        for (u64 i = min_bucket; i < max_bucket; i++) {
+            while (table[i].size() < log2(table.size())) {
                 Point random_element(prng);
                 table[i].push_back(random_element);
                 size++;
@@ -56,6 +56,10 @@ namespace unbalanced_psi {
         }
 
         std::clog << "[ hash ] added " << size - before << " mock elements to pad" << std::endl;
+    }
+
+    void Hashtable::pad() {
+        pad(0, table.size());
     }
 
     void Hashtable::to_file(std::string filename) {
@@ -134,5 +138,35 @@ namespace unbalanced_psi {
             if (collisions < bucket.size()) { collisions = bucket.size(); }
         }
         return collisions;
+    }
+
+    void Hashtable::concat(Hashtable other) {
+
+        if (other.buckets() != table.size()) {
+            throw std::runtime_error("trying to concat two different size hashtables");
+        }
+
+        size += other.size;
+
+        for (auto i = 0; i < table.size(); i++) {
+            table[i].insert(table[i].end(), other.table[i].begin(), other.table[i].end());
+            /*
+            table[i].insert(
+                table[i].end(),
+                std::make_move_iterator(other.table[i].begin()),
+                std::make_move_iterator(other.table[i].end())
+            );
+            */
+        }
+    }
+
+    void Hashtable::log() {
+        for (auto i = 0; i < table.size(); i++) {
+            auto bucket = table[i];
+            for (Point element : bucket) {
+                std::clog << "[  hash  ] bucket (" << i << ")\t:";
+                std::clog << to_hex(element) << std::endl;
+            }
+        }
     }
 }

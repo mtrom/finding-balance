@@ -5,6 +5,9 @@
 #include "utils.h"
 
 
+#define OFFLINE_THREADS 4
+
+
 namespace unbalanced_psi {
 
 
@@ -30,6 +33,10 @@ namespace unbalanced_psi {
 
         // encrypt dataset
         void offline();
+
+#if OFFLINE_THREADS != 1
+        Hashtable partial_offline(u64 min_bucket, u64 max_bucket);
+#endif
 
         // reply to encryption request on client set
         void online();
