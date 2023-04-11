@@ -1,11 +1,9 @@
-#include <chrono>
 #include <fstream>
 #include <cryptoTools/Common/CLP.h>
 
 #include "client.h"
 #include "server.h"
 
-using namespace std::chrono;
 using namespace unbalanced_psi;
 
 
@@ -22,26 +20,25 @@ int main(int argc, char *argv[]) {
         auto server_n = parser.get<u64>("-server-n");
 
         Client client(input);
-        auto start = high_resolution_clock::now();
+
+        Timer timer("[ client ] offline:\t");
         client.offline(server_n);
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<nanoseconds>(stop - start);
+        timer.stop();
+
         client.to_file(output);
 
-        std::cout <<  "[ client ] offline:\t" << duration.count() << "ns" << std::endl;
         return 0;
     } else if (parser.isSet("server") || parser.isSet("-server")) {
         auto input = parser.getOr<std::string>("-db", "out/server.db");
         auto output = parser.getOr<std::string>("-out", "out/server.edb");
 
         Server server(input);
-        auto start = high_resolution_clock::now();
-        server.offline();
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<milliseconds>(stop - start);
-        server.to_file(output);
 
-        std::cout <<  "[ server ] offline:\t" << duration.count() << "ms" << std::endl;
+        Timer timer("[ client ] offline:\t");
+        server.offline();
+        timer.stop();
+
+        server.to_file(output);
 
         return 0;
     } else {

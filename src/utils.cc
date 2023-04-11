@@ -10,6 +10,8 @@
 
 #define HASH_SIZE 32
 
+using namespace std::chrono;
+
 namespace unbalanced_psi {
 
     /**
@@ -129,5 +131,23 @@ namespace unbalanced_psi {
         }
 
         return output;
+    }
+
+    Timer::Timer(std::string msg) : message(msg) {
+        start = high_resolution_clock::now();
+    }
+
+    void Timer::stop() {
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<nanoseconds>(stop - start);
+        auto unit = "ns";
+
+        if (duration.count() > 1000000) {
+            auto ms = duration_cast<milliseconds>(duration);
+            unit = "ms";
+            std::cout << message << ms.count() << unit << std::endl;
+        } else {
+            std::cout << message << duration.count() << unit << std::endl;
+        }
     }
 }

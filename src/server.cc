@@ -2,8 +2,6 @@
 
 #include "server.h"
 
-using namespace std::chrono;
-
 namespace unbalanced_psi {
 
     /**
@@ -103,6 +101,8 @@ namespace unbalanced_psi {
         std::clog << "[server] waiting on request..." << std::endl;
         ddh_channel.waitForConnection();
 
+        Timer timer("[ server ] online:\t");
+
         vector<u8> request;
         ddh_channel.recv(request);
         std::clog << "[server] request recieved: " << request.size() << std::endl;
@@ -118,6 +118,8 @@ namespace unbalanced_psi {
 
         std::clog << "[server] sending response: " << response.size() << std::endl;
         ddh_channel.send(response);
+
+        timer.stop();
     }
 
     void Server::to_file(std::string filename) {

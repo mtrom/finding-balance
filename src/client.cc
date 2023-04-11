@@ -4,8 +4,6 @@
 
 #include "client.h"
 
-using namespace std::chrono;
-
 namespace unbalanced_psi {
 
     Client::Client(std::string filename)
@@ -30,6 +28,16 @@ namespace unbalanced_psi {
     }
 
     void Client::online() {
+        // set up network connections
+        auto ip = std::string("127.0.0.1");
+        auto port = 1212;
+
+        Session ddh_session(ios, ip + ':' + std::to_string(port), SessionMode::Client, std::string("ddh_session"));
+        Channel ddh_channel = ddh_session.addChannel();
+        ddh_channel.waitForConnection();
+
+        Timer timer("[ client ] online: \t");
+
         // TODO: should this be offline as well? two offlines?
         // hash elements in dataset
         for (auto i = 0; i < dataset.size(); i++) {
@@ -39,13 +47,6 @@ namespace unbalanced_psi {
             std::clog << "[ client ] h(y)^b: " << to_hex(encrypted[i]) << std::endl;
         }
 
-        // set up network connections
-        auto ip = std::string("127.0.0.1");
-        auto port = 1212;
-
-        Session ddh_session(ios, ip + ':' + std::to_string(port), SessionMode::Client, std::string("ddh_session"));
-        Channel ddh_channel = ddh_session.addChannel();
-        ddh_channel.waitForConnection();
 
         std::clog << "[client] sending request..." << std::endl;
 
@@ -68,6 +69,7 @@ namespace unbalanced_psi {
             std::clog << to_hex(response.data() + (i * Point::size), Point::size) << std::endl;
             encrypted[i].fromBytes(response.data() + (i * Point::size));
         }
+        timer.stop();
     }
 
     void Client::finalize(std::string filename) {
@@ -84,7 +86,8 @@ namespace unbalanced_psi {
         vector<u8> bytes(filesize);
         file.read((char*) bytes.data(), filesize);
 
-        auto start = high_resolution_clock::now();
+        Timer timer("[ client ] finalize:\t");
+
         int found = 0;
         for (u8 *ptr = bytes.data(); ptr < &bytes.back(); ptr += Point::size) {
             std::clog << "[ client ] reading in Point: ";
@@ -102,9 +105,8 @@ namespace unbalanced_psi {
                 }
             }
         }
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<milliseconds>(stop - start);
-        std::cout <<  "[ client ] after:\t" << duration.count() << "ms" << std::endl;
+
+        timer.stop();
 
         std::cout << "[ client ] found " << std::to_string(found);
         std::cout << " elements in the intersection" << std::endl;
