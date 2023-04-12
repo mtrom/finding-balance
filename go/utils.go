@@ -4,9 +4,11 @@ import (
     "bufio"
     "bytes"
     "encoding/binary"
-    "log"
+    "fmt"
     "io"
+    "log"
     "os"
+    "time"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
@@ -126,4 +128,36 @@ func BytesToMatrix(input []byte, rows, cols uint64) *Matrix {
         )
     }
     return matrix
+}
+
+/**
+ * makes it easy to track timing execution
+ */
+type Timer struct {
+    message string
+    start time.Time
+    elapsed time.Duration
+    unit string
+}
+
+func (t* Timer) End() {
+    t.elapsed = time.Since(t.start)
+    t.unit = "ns"
+    if t.elapsed > 1000000 {
+        t.unit = "ms"
+        t.elapsed /= 1000000
+    }
+
+    t.Print()
+}
+
+func (t* Timer) Print() {
+    fmt.Printf("%s\t%d%s\n", t.message, t.elapsed, t.unit)
+}
+
+func StartTimer(message string) *Timer {
+    timer := new(Timer)
+    timer.message = message
+    timer.start = time.Now()
+    return timer
 }

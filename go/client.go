@@ -2,75 +2,74 @@ package main
 
 import (
 	"crypto/aes"
-    "log"
     "time"
     "net"
-    "io"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
 
-// TODO: document this war crime
+/**
+ * this seeds the randomness and allows the client to generate the lwe matrix
+ * from the seed, but the simplepir library doesn't export it so we need to
+ * force this link
+ */
 // go:linkname bufPrgReader pir.bufPrgReader
 var bufPrgReader *BufPRGReader
 
-
+/**
+ * run protocol as the server
+ *
+ * @param <input> filename for the indices to query
+ * @param <output> filename to write the answer to
+ * @param <dbSize> size of the server's db in bytes
+ * @param <bucketSize> size of a bucket in bytes
+ */
 func RunClient(input, output string, dbSize, bucketSize uint64) {
+
+    timer := StartTimer("[ client ] pir offline:")
+
+    // decide protocol parameters and query indices
     queries := ReadQueries(input)
     protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
+    dbInfo := SetupDBInfo(dbSize, entryBits, params)
 
-    // read lwe matrix seed from server
-    server, err := net.Listen(SERVER_TYPE, SERVER_HOST)
+    // connect to server
+    connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)
     if err != nil { panic(err) }
-    defer server.Close()
+    defer connection.Close()
 
-    connection, err := server.Accept()
+    server, err := connection.Accept()
     if err != nil { panic(err) }
-    connection.SetDeadline(time.Time{})
+    server.SetDeadline(time.Time{})
 
+    // read in the 'offline' data in chunks (i.e., lwe matrix seed and hint)
     var bytes []byte
-    log.Printf("[ client ] offline = %d", len(bytes))
-
     for i := uint64(0);
         i < aes.BlockSize + params.L * params.N * ELEMENT_SIZE;
         i += CHUNK_SIZE {
-        // log.Printf("[ client ] reading chunk %d", i / CHUNK_SIZE)
         chunk := make([]byte, CHUNK_SIZE)
-        _, err := connection.Read(chunk)
+        _, err := server.Read(chunk)
         bytes = append(bytes, chunk...)
-        if err == io.EOF {
-            break
-        } else if err != nil {
-            panic(err)
-        }
+        if err != nil { panic(err) }
     }
-
-    log.Printf(
-        "[ client ] hintBytes = %d - %d = %d",
-        len(bytes), aes.BlockSize, len(bytes) - aes.BlockSize,
-    )
-
-    var seed PRGKey
-    copy(seed[:], bytes[:aes.BlockSize])
-
-    dbInfo := SetupDBInfo(dbSize, entryBits, params)
 
     hint := BytesToMatrix(bytes[aes.BlockSize:], params.L, params.N)
 
     // this seeds the randomness when generating the lwe matrix
+    var seed PRGKey
+    copy(seed[:], bytes[:aes.BlockSize])
     bufPrgReader = NewBufPRG(NewPRG(&seed))
+
+    // generate the lwe matrix from the seed
     lweMatrix := protocol.DecompressState(dbInfo, *params, MakeCompressedState(&seed))
 
-    params.PrintParams()
-    log.Printf(
-        "[ client ] Packing = %d, Ne = %d, Basis = %d, Squishing = %d, Cols = %d\n",
-        dbInfo.Packing, dbInfo.Ne, dbInfo.Basis, dbInfo.Squishing, dbInfo.Cols,
-    )
-
+    timer.End()
+    timer = StartTimer("[ client ] pir online:")
 
     var results []uint64
     queried := map[uint64]struct{}{}
     for _, col := range queries {
+
         // translate the hash value into the column by dividing by the number
         // of buckets per column
         translated := col / (params.L / bucketSize)
@@ -80,8 +79,6 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
             panic("our translated query larger then the number of columns")
         }
 
-        log.Printf("[ go/pir ] translated query %d to %d\n", col, translated)
-
         // don't query the same column twice
         if _, already_queried := queried[translated]; already_queried {
             continue;
@@ -89,16 +86,21 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
             queried[translated] = struct{}{}
         }
 
+        // generate the query vector and send to server
+        queryTimer := StartTimer("[ client ] pir query:")
         secret, query := protocol.Query(translated, lweMatrix, *params, dbInfo)
+        queryTimer.End()
 
         bytes := MatrixToBytes(query.Data[0])
+        server.Write(bytes)
 
-        connection.Write(bytes)
-
+        // read the query's answer
         bytes = make([]byte, params.L * ELEMENT_SIZE)
-        connection.Read(bytes)
+        server.Read(bytes)
         answer := BytesToMatrix(bytes, params.L, 1)
 
+        // reconstruct the data based on the answer
+        recoverTimer := StartTimer("[ client ] pir recover:")
         column := RecoverColumn(
             MakeMsg(hint),
             query,
@@ -107,9 +109,12 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
             *params,
             dbInfo,
         )
+        recoverTimer.End()
 
         results = append(results, column...)
     }
+
+    timer.End()
 
     WriteDatabase(output, results)
 }
