@@ -17,7 +17,6 @@ func RecoverColumn(
     offline Msg,
     query Msg,
     answer Msg,
-    shared State,
     client State,
     p Params,
     info DBinfo,

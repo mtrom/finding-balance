@@ -94,3 +94,46 @@ func CreateDatabase(dbSize, entryBits uint64, params *Params, values []uint64) *
 
 	return db
 }
+
+/**
+ * setup the database info without needing the db itself for the client
+ * modified from pir.database.SetupDB()
+ *
+ * @param <dbSize> number of entries in the database
+ * @param <entryBits> number of bits to represent an entry
+ * @param <params> protocol parameters
+ */
+func SetupDBInfo(dbSize, entryBits uint64, params *Params) (DBinfo) {
+
+    var info DBinfo
+
+	info.Num = dbSize
+	info.Row_length = entryBits
+	info.P = params.P
+	info.Logq = params.Logq
+
+	ptElems, ptPerEntry, entryPerPt := Num_DB_entries(dbSize, entryBits, params.P)
+	info.Ne = ptPerEntry
+	info.X = info.Ne
+	info.Packing = entryPerPt
+
+	for info.Ne % info.X != 0 {
+		info.X += 1
+	}
+
+	if ptElems > params.L * params.M {
+		panic("Params and database size don't match")
+	}
+
+	if params.L % info.Ne != 0 {
+		panic("Number of DB elems per entry must divide DB height")
+	}
+
+    // this isn't in pir.database.SetupDB() but later in pir.database.Squish()
+	info.Basis = 10
+	info.Squishing = 3
+    info.Cols = params.M
+
+    return info
+}
+

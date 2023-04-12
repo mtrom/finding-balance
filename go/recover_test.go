@@ -11,7 +11,7 @@ import (
 
 func TestRecoverColumn(t *testing.T) {
     cwd, _ := os.Getwd()
-    protocol, p, db := SetupProtocol(filepath.Join(cwd, "test.edb"))
+    protocol, p, db, _ := SetupProtocolAndDB(filepath.Join(cwd, "test.edb"))
     params := *p
 
     var tests = []struct {
@@ -44,7 +44,6 @@ func TestRecoverColumn(t *testing.T) {
                 offline,
                 querySlice.Data[0],
                 answer,
-                shared_state,
                 client_state,
                 params,
                 db.Info,

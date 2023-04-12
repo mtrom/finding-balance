@@ -52,14 +52,13 @@ func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params)
 }
 
 /**
- * setup db & parameters for a SimplePIR protocol
- *  note that a db `element' here is not a 1:1 corresponding to a ddh
- *  element, but only makes up part of it
+ * setup parameters for a SimplePIR protocol
  *
- * @param <dbFn> filename for the database
- * @returns protocol, database, & parameters (& bucket size in bytes)
+ * @param <dbSize> number of _bytes_ in the database
+ * @params <bucketSize> number of bytes in each bucket
+ * @returns protocol, parameters, and entry bits (so it can be used below)
  */
-func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database, uint64) {
+func SetupProtocol(dbSize, bucketSize uint64) (SimplePIR, *Params, uint64) {
 
     // LWE params
     const LOGQ = uint64(32)
@@ -68,20 +67,32 @@ func SetupProtocol(dbFn string) (SimplePIR, *Params, *Database, uint64) {
     // bits per database `element'
     const ENTRY_BITS = uint64(8)
 
-    // raw binary database
-    values, bucket_size := ReadDatabase(dbFn)
-
-    // number of `elements' in database
-    db_size := uint64(len(values))
-    log.Printf("[ go/pir ] DB_SIZE = %d\n", db_size)
-
     params := GetParams(
-        db_size, bucket_size, ENTRY_BITS, SEC_PARAM, LOGQ,
+        dbSize, bucketSize, ENTRY_BITS, SEC_PARAM, LOGQ,
     )
     protocol := SimplePIR{}
-    db       := CreateDatabase(db_size, ENTRY_BITS, params, values)
 
-    return protocol, params, db, bucket_size
+    return protocol, params, ENTRY_BITS
+}
+
+/**
+ * setup db & parameters for a SimplePIR protocol
+ *  note that a db `element' here is not a 1:1 corresponding to a ddh
+ *  element, but only makes up part of it
+ *
+ * @param <dbFn> filename for the database
+ * @returns protocol, database, & parameters (& bucket size in bytes)
+ */
+func SetupProtocolAndDB(dbFn string) (SimplePIR, *Params, *Database, uint64) {
+
+    // raw binary database
+    values, bucketSize := ReadDatabase(dbFn)
+    dbSize := uint64(len(values))
+
+    protocol, params, ENTRY_BITS := SetupProtocol(dbSize, bucketSize)
+    db := CreateDatabase(dbSize, ENTRY_BITS, params, values)
+
+    return protocol, params, db, bucketSize
 }
 
 /**
@@ -149,7 +160,6 @@ func RunProtocol(
         comm += float64(querySlice.Size() * uint64(params.Logq) / (8.0 * 1024.0))
 
         log.Printf("[ go/pir ] db size   : %d x %d\n", db.Data.Rows, db.Data.Cols)
-        log.Printf("[ go/pir ] query size: %d x %d\n", query.Data[0].Rows, query.Data[0].Cols)
 
         // create answer vector
         startAnswer := time.Now()
@@ -163,7 +173,6 @@ func RunProtocol(
             offline,
             querySlice.Data[0],
             answer,
-            shared_state,
             client_state,
             params,
             db.Info,

@@ -7,10 +7,15 @@ import (
     "log"
     "io"
     "os"
+
+    . "github.com/ahenzinger/simplepir/pir"
 )
 
+// size of a group element in bytes
 const POINT_SIZE uint64 = 33
 
+// size of a matrix element in bytes
+const ELEMENT_SIZE = 4
 
 /**
  * convert byte array to a hex string for debugging
@@ -92,4 +97,33 @@ func ReadQueries(filename string) []uint64 {
         queries = append(queries, index)
     }
     return queries
+}
+
+
+/**
+ * serializes matrix into []byte for sending over network
+ */
+func MatrixToBytes(matrix *Matrix) []byte {
+    output := make([]byte, len(matrix.Data) * ELEMENT_SIZE)
+    for i := range matrix.Data {
+        binary.LittleEndian.PutUint32(
+            output[i * ELEMENT_SIZE:i * ELEMENT_SIZE + 4],
+            uint32(matrix.Data[i]),
+        )
+    }
+    return output
+}
+
+/**
+ * deserializes matrix from []byte after receiving over network
+ */
+func BytesToMatrix(input []byte, rows, cols uint64) *Matrix {
+    matrix := MatrixNew(rows, cols)
+    for i := uint64(0); i < rows * cols; i++ {
+        matrix.Set(
+            uint64(binary.LittleEndian.Uint32(input[i*4:(i+1)*4])),
+            i / cols, i % cols,
+        )
+    }
+    return matrix
 }
