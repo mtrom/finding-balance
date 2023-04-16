@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <ostream>
+#include <random>
 
 #include "hashtable.h"
 #include "utils.h"
@@ -36,8 +38,8 @@ namespace unbalanced_psi {
         size++;
 
         if (table[index].size() > log2(table.size())) {
-            std::clog << "more than log2(size) collisions" << std::endl;
-            // throw std::overflow_error("more than log2(size) collisions");
+            // std::clog << "more than log2(size) collisions" << std::endl;
+            throw std::overflow_error("more than log2(size) collisions");
         }
     }
 
@@ -60,6 +62,13 @@ namespace unbalanced_psi {
 
     void Hashtable::pad() {
         pad(0, table.size());
+    }
+
+    void Hashtable::shuffle() {
+        auto prng = std::default_random_engine{};
+        for (auto i = 0; i < table.size(); i++) {
+            std::shuffle(table[i].begin(), table[i].end(), prng);
+        }
     }
 
     void Hashtable::to_file(std::string filename) {
@@ -150,13 +159,6 @@ namespace unbalanced_psi {
 
         for (auto i = 0; i < table.size(); i++) {
             table[i].insert(table[i].end(), other.table[i].begin(), other.table[i].end());
-            /*
-            table[i].insert(
-                table[i].end(),
-                std::make_move_iterator(other.table[i].begin()),
-                std::make_move_iterator(other.table[i].end())
-            );
-            */
         }
     }
 

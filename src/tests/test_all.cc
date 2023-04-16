@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "../defines.h"
 
 #include "test_utils.h"
@@ -6,6 +8,11 @@
 using namespace unbalanced_psi;
 
 int main() {
+
+    // turn off any debugging logs
+    std::ofstream nullstream;
+    std::clog.rdbuf(nullstream.rdbuf());
+
     TestCollection tests([](TestCollection& th) {
         th.add("test_generate_datasets_overlap ", test_generate_datasets_overlap);
         th.add("test_write_read_dataset        ", test_write_read_dataset);
@@ -18,7 +25,8 @@ int main() {
         th.add("test_hashtable_pad_one         ", test_hashtable_pad_one);
         th.add("test_hashtable_pad_many        ", test_hashtable_pad_many);
         th.add("test_hashtable_from_file       ", test_hashtable_from_file);
-        th.add("test_hashtable_to_from_file       ", test_hashtable_from_file);
+        th.add("test_hashtable_to_from_file    ", test_hashtable_from_file);
+        th.add("test_hashtable_shuffle         ", test_hashtable_shuffle);
     });
 
     tests.runAll();

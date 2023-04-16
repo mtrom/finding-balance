@@ -1,6 +1,8 @@
 #include "test_hashtable.h"
 
 #include <stdio.h>
+#include <algorithm>
+#include <random>
 
 #include "../utils.h"
 
@@ -196,6 +198,34 @@ namespace unbalanced_psi {
             std::snprintf(errmsg, sizeof(errmsg), "found %d mismatched elements", errors);
             throw UnitTestFail(errmsg);
         }
+    }
 
+    void test_hashtable_shuffle() {
+        u64 TABLE_SIZE = 32;
+
+        Curve curve;
+        INPUT_TYPE element = 42;
+        Point encrypted = hash_to_group_element(element);
+        u64 index = Hashtable::hash(element, TABLE_SIZE);
+
+        Hashtable hashtable(TABLE_SIZE);
+        hashtable.insert(element, encrypted);
+        hashtable.pad();
+        hashtable.shuffle();
+
+        auto bucket = hashtable.table[index];
+        bool found = false;
+
+        for (auto i = 0; i < bucket.size(); i++) {
+            if (bucket[i] != encrypted) { continue; }
+            if (i == 0) {
+                throw UnitTestFail("inserted element still at front of bucket");
+            }
+            found = true;
+        }
+
+        if (!found) {
+            throw UnitTestFail("inserted element disappeared after shuffling");
+        }
     }
 }

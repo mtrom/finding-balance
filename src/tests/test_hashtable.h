@@ -12,4 +12,5 @@ namespace unbalanced_psi {
     void test_hashtable_pad_many();
     void test_hashtable_from_file();
     void test_hashtable_to_from_file();
+    void test_hashtable_shuffle();
 }

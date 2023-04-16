@@ -27,6 +27,8 @@ namespace unbalanced_psi {
 
         void pad(u64 min_bucket, u64 max_bucket);
 
+        void shuffle();
+
         u64 buckets();
 
         void concat(Hashtable other);
