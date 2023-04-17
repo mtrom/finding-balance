@@ -13,24 +13,31 @@ import (
  *
  * @param <input> filename for an encrypted database
  */
-func RunServer(input string) {
+func RunServer(input string, queries uint64) {
 
-    timer := StartTimer("[ server ] pir offline:")
-
-    // decide protocol parameters
-    protocol, params, db, _ := SetupProtocolAndDB(input)
-
-    // sample seed for lwe random matrix A
-    lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
-
-    // calculate hint seed
-    serverState, hint := protocol.Setup(db, lweMatrix, *params)
+    // read in encrypted database from file
+    values, bucketSize := ReadDatabase(input)
+    dbSize := uint64(len(values))
 
     // connect to client
     client, err := net.Dial(SERVER_TYPE, SERVER_HOST)
     if err != nil { panic(err) }
     defer client.Close()
     client.SetDeadline(time.Time{})
+
+    ///////////////////////// OFFLINE /////////////////////////
+
+    timer := StartTimer("[ server ] pir offline:")
+
+    // decide protocol parameters and set up database
+    protocol, params, ENTRY_BITS := SetupProtocol(dbSize, bucketSize)
+    db := CreateDatabase(dbSize, ENTRY_BITS, params, values)
+
+    // sample seed for lwe random matrix A
+    lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
+
+    // calculate hint seed
+    serverState, hint := protocol.Setup(db, lweMatrix, *params)
 
     // gather lwe matrix seed and hint into 'offline' dataset
     var bytes = make([]byte, aes.BlockSize)
@@ -45,6 +52,9 @@ func RunServer(input string) {
     }
 
     timer.End()
+
+    ////////////////////////// ONLINE /////////////////////////
+
     timer = StartTimer("[ server ] pir online:")
 
     // expected size of the query vector
@@ -55,16 +65,19 @@ func RunServer(input string) {
 		queryRows += db.Info.Squishing - (params.M % db.Info.Squishing)
 	}
 
-    // read in query vector
-    bytes = make([]byte, queryRows * ELEMENT_SIZE)
-    client.Read(bytes)
-    query := BytesToMatrix(bytes, queryRows, 1)
+    for i := uint64(0); i < queries; i++ {
+        // read in query vector
+        bytes = make([]byte, queryRows * ELEMENT_SIZE)
+        client.Read(bytes)
+        query := BytesToMatrix(bytes, queryRows, 1)
 
-    // generate answer and send to client
-    answerTimer := StartTimer("[ server ] pir answer:")
-    answer := protocol.Answer(db, MakeMsgSlice(MakeMsg(query)), serverState, lweMatrix, *params)
-    answerTimer.End()
+        // generate answer and send to client
+        answerTimer := StartTimer("[ server ] pir answer:")
+        answer := protocol.Answer(db, MakeMsgSlice(MakeMsg(query)), serverState, lweMatrix, *params)
+        answerTimer.End()
 
-    client.Write(MatrixToBytes(answer.Data[0]))
+        client.Write(MatrixToBytes(answer.Data[0]))
+    }
+
     timer.End()
 }

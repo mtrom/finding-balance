@@ -26,12 +26,8 @@ var bufPrgReader *BufPRGReader
  */
 func RunClient(input, output string, dbSize, bucketSize uint64) {
 
-    timer := StartTimer("[ client ] pir offline:")
-
-    // decide protocol parameters and query indices
+    // read in query indices
     queries := ReadQueries(input)
-    protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
-    dbInfo := SetupDBInfo(dbSize, entryBits, params)
 
     // connect to server
     connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)
@@ -42,15 +38,22 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     if err != nil { panic(err) }
     server.SetDeadline(time.Time{})
 
+    ///////////////////////// OFFLINE /////////////////////////
+
+    timer := StartTimer("[ client ] pir offline:")
+
+    // decide protocol parameters
+    protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
+    dbInfo := SetupDBInfo(dbSize, entryBits, params)
+
     // read in the 'offline' data in chunks (i.e., lwe matrix seed and hint)
+    chunks := aes.BlockSize + params.L * params.N * ELEMENT_SIZE
     var bytes []byte
-    for i := uint64(0);
-        i < aes.BlockSize + params.L * params.N * ELEMENT_SIZE;
-        i += CHUNK_SIZE {
+    for i := uint64(0); i < chunks; i += CHUNK_SIZE {
         chunk := make([]byte, CHUNK_SIZE)
         _, err := server.Read(chunk)
-        bytes = append(bytes, chunk...)
         if err != nil { panic(err) }
+        bytes = append(bytes, chunk...)
     }
 
     hint := BytesToMatrix(bytes[aes.BlockSize:], params.L, params.N)
@@ -64,6 +67,9 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     lweMatrix := protocol.DecompressState(dbInfo, *params, MakeCompressedState(&seed))
 
     timer.End()
+
+    ////////////////////////// ONLINE /////////////////////////
+
     timer = StartTimer("[ client ] pir online:")
 
     var results []uint64
@@ -73,18 +79,6 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         // translate the hash value into the column by dividing by the number
         // of buckets per column
         translated := col / (params.L / bucketSize)
-
-        // this should not happen
-        if translated % params.M != translated {
-            panic("our translated query larger then the number of columns")
-        }
-
-        // don't query the same column twice
-        if _, already_queried := queried[translated]; already_queried {
-            continue;
-        } else {
-            queried[translated] = struct{}{}
-        }
 
         // generate the query vector and send to server
         queryTimer := StartTimer("[ client ] pir query:")
@@ -98,6 +92,13 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         bytes = make([]byte, params.L * ELEMENT_SIZE)
         server.Read(bytes)
         answer := BytesToMatrix(bytes, params.L, 1)
+
+        // if we've already queried this column, don't bother recovering
+        if _, already_queried := queried[translated]; already_queried {
+            continue;
+        } else {
+            queried[translated] = struct{}{}
+        }
 
         // reconstruct the data based on the answer
         recoverTimer := StartTimer("[ client ] pir recover:")
@@ -115,6 +116,8 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     }
 
     timer.End()
+
+    ///////////////////////////////////////////////////////////
 
     WriteDatabase(output, results)
 }

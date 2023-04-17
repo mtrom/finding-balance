@@ -18,8 +18,9 @@ int main(int argc, char *argv[]) {
     IOService ios(IOS_THREADS);
 
     if (parser.isSet("client") || parser.isSet("-client")) {
-        auto dataset = parser.getOr<std::string>("-db", "out/client.db");
-        auto answer  = parser.getOr<std::string>("-db", "out/answer.edb");
+        auto dataset  = parser.getOr<std::string>("-db", "out/client.db");
+        auto answer   = parser.getOr<std::string>("-ans", "out/answer.edb");
+        auto expected = parser.get<u64>("-expected");
 
         Client client(dataset, answer);
 
@@ -33,11 +34,16 @@ int main(int argc, char *argv[]) {
         offline.stop();
 
         Timer online("[ client ] online:\t");
-        auto found = client.online(channel);
+        auto actual = client.online(channel);
         online.stop();
 
-        std::cout << "[ client ] found " << std::to_string(found);
-        std::cout << " elements in the intersection" << std::endl;
+        if (actual == expected) {
+            std::cout << "\033[32m" << "[ client ] SUCCESS" << "\033[0m" << std::endl;
+        } else {
+            std::cout << "\033[31m" << "[ client ] FAILURE: expected ";
+            std::cout << expected << " but found " << actual;
+            std::cout << "\033[0m" << std::endl;
+        }
 
         return 0;
     } else if (parser.isSet("server") || parser.isSet("-server")) {

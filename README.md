@@ -51,7 +51,6 @@ I think `go get` should be okay now that its in the `go.mod` file.
 - test changes to parameter picking in go
 - random seeds aren't very random
 - cuckoo hashing for multiple queries
-- pir server doesn't support multiple queries
 - test changes to ENTRY_BITS
 - set up for easy benchmarking
 
