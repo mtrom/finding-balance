@@ -59,7 +59,7 @@ namespace unbalanced_psi {
     void write_dataset(vector<INPUT_TYPE> dataset, std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) {
-            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+            throw std::runtime_error("cannot open " + filename);
         }
         file.write((const char*) dataset.data(), dataset.size() * sizeof(INPUT_TYPE));
     }
@@ -73,7 +73,7 @@ namespace unbalanced_psi {
     vector<INPUT_TYPE> read_dataset(std::string filename) {
         std::ifstream file(filename, std::ios::in | std::ios::binary);
         if (!file) {
-            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+            throw std::runtime_error("cannot open " + filename);
         }
 
         file.seekg (0, file.end);

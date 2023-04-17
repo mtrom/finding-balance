@@ -6,7 +6,7 @@
 
 
 #define SERVER_SEED 406
-#define OFFLINE_THREADS 4
+#define OFFLINE_THREADS 16
 
 
 namespace unbalanced_psi {

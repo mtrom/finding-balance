@@ -24,8 +24,7 @@ make install
 
 Install Coproto:
 ```bash
-py build.py --setup --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D
-COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
+py build.py --setup --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
 py build.py --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
 ```
 
@@ -65,4 +64,14 @@ echo -n -e '\xD2\x04\x00\x00\x40\xE2\x01\x00\x4E\x61\xBC\x00\xD2\x02\x96\x49' > 
 ```
 ```bash
 echo -n -e $(cat test.edb.desc | tr -d '\n') > go/test.edb
+```
+
+## AWS Commands
+
+```bash
+scp deploy.sh -i aws-key.pem ec2-user@<ip-address>
+ssh -i aws-key.pem ec2-user@<ip-address>
+ssh-keygen -t ed25519 -C "mtromanhauser@gmail.com"
+# & add public key to github
+./deploy.sh
 ```

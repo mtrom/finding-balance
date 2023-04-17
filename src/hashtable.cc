@@ -74,7 +74,7 @@ namespace unbalanced_psi {
     void Hashtable::to_file(std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) {
-            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+            throw std::runtime_error("cannot open " + filename);
         }
 
         u64 buckets = table.size();
@@ -108,7 +108,7 @@ namespace unbalanced_psi {
     void Hashtable::from_file(std::string filename) {
         std::ifstream file(filename, std::ios::in | std::ios::binary);
         if (!file) {
-            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+            throw std::runtime_error("cannot open " + filename);
         }
 
         u64 buckets;

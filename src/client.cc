@@ -93,7 +93,7 @@ namespace unbalanced_psi {
     void Client::to_file(std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) {
-            throw std::filesystem::filesystem_error("cannot open " + filename, std::error_code());
+            throw std::runtime_error("cannot open " + filename);
         }
 
         file.write((const char*) queries.data(), queries.size() * sizeof(u64));
