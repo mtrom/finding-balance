@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
 
         Client client(input);
 
-        Timer timer("[ client ] offline:\t");
-        client.offline(server_n);
+        Timer timer("[ client ] offline (1):\t");
+        client.prepare_queries(server_n);
         timer.stop();
 
         client.to_file(output);
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 
         Server server(input);
 
-        Timer timer("[ client ] offline:\t");
+        Timer timer("[ server ] offline:\t");
         server.offline();
         timer.stop();
 

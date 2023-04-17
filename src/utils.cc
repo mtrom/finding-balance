@@ -27,10 +27,6 @@ namespace unbalanced_psi {
         vector<INPUT_TYPE> dataset(size);
         prng.get(dataset.data(), dataset.size());
 
-        if (std::find(dataset.begin(), dataset.end(), MOCK_ELEMENT) != dataset.end()) {
-            throw std::runtime_error("generated the MOCK_ELEMENT randomly");
-        }
-
         return dataset;
     }
 

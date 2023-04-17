@@ -12,7 +12,6 @@
 #include <cryptoTools/Network/IOService.h>
 
 #define PADDING_SEED 1986
-#define IOS_THREADS 3
 
 namespace unbalanced_psi {
 
@@ -53,4 +52,3 @@ namespace unbalanced_psi {
 }
 
 #define INPUT_TYPE u32
-#define MOCK_ELEMENT INPUT_TYPE(-1)
