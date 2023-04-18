@@ -56,9 +56,9 @@ namespace unbalanced_psi {
          * send dataset for server's encryption and compare to pir results
          *
          * @params <channel> communication channel with the server
-         * @return number of overlapping elements
+         * @return number of overlapping elements and communication size in bytes
          */
-        u64 online(Channel channel);
+        tuple<u64, u64> online(Channel channel);
 
         /**
          * write the pir query indices to file

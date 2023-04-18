@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
     std::clog.rdbuf(nullstream.rdbuf());
 
     IOService ios(IOS_THREADS);
+    ios.mPrint = false;
 
     if (parser.isSet("client") || parser.isSet("-client")) {
         auto dataset  = parser.getOr<std::string>("-db", "out/client.db");
@@ -29,20 +30,25 @@ int main(int argc, char *argv[]) {
         Channel channel = session.addChannel();
         channel.waitForConnection();
 
-        Timer offline("[ client ] offline (2):\t");
+        Timer offline("[ client ] ddh offline (2)", BLUE);
         client.offline();
         offline.stop();
 
-        Timer online("[ client ] online:\t");
-        auto actual = client.online(channel);
+        vector<u8> ready;
+        channel.recv(ready);
+
+        Timer online("[ client ] ddh online", BLUE);
+        auto [ actual, comm ] = client.online(channel);
         online.stop();
 
+        std::cout << "[  both  ] online comm (bytes)\t: " << comm << std::endl;
+
         if (actual == expected) {
-            std::cout << "\033[32m" << "[ client ] SUCCESS" << "\033[0m" << std::endl;
+            std::cout << GREEN << "\n[ client ] SUCCESS" << RESET << std::endl;
         } else {
-            std::cout << "\033[31m" << "[ client ] FAILURE: expected ";
+            std::cout << RED << "[ client ] FAILURE: expected ";
             std::cout << expected << " but found " << actual;
-            std::cout << "\033[0m" << std::endl;
+            std::cout << RESET << std::endl;
         }
 
         return 0;
@@ -56,7 +62,10 @@ int main(int argc, char *argv[]) {
         Channel channel = session.addChannel();
         channel.waitForConnection();
 
-        Timer online("[ server ] online:\t");
+        vector<u8> ready { 1 };
+        channel.send(ready);
+
+        Timer online("[ server ] ddh online", RED);
         server.online(channel);
         online.stop();
 

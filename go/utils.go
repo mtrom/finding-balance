@@ -19,6 +19,14 @@ const POINT_SIZE uint64 = 33
 // size of a matrix element in bytes
 const ELEMENT_SIZE = 4
 
+const RED   = "\033[0;31m"
+const GREEN = "\033[0;32m"
+const BLUE  = "\033[0;34m"
+const CYAN  = "\033[0;36m"
+const WHITE = "\033[0;37m"
+const RESET = "\033[0m"
+
+
 /**
  * convert byte array to a hex string for debugging
  */
@@ -135,29 +143,43 @@ func BytesToMatrix(input []byte, rows, cols uint64) *Matrix {
  */
 type Timer struct {
     message string
+    color string
     start time.Time
     elapsed time.Duration
-    unit string
+}
+
+func (t* Timer) Start() {
+    t.start = time.Now()
+}
+
+func (t* Timer) Stop() {
+    t.elapsed += time.Since(t.start)
 }
 
 func (t* Timer) End() {
-    t.elapsed = time.Since(t.start)
-    t.unit = "ns"
-    if t.elapsed > 1000000 {
-        t.unit = "ms"
-        t.elapsed /= 1000000
-    }
-
+    t.Stop()
     t.Print()
 }
 
 func (t* Timer) Print() {
-    fmt.Printf("%s\t%d%s\n", t.message, t.elapsed, t.unit)
+    fmt.Printf(
+        "%s%s (ms)\t: %.3f\t%s\n",
+        t.color, t.message, t.elapsed.Seconds() * 1000, RESET,
+    )
 }
 
-func StartTimer(message string) *Timer {
+func CreateTimer(message, color string) *Timer {
     timer := new(Timer)
     timer.message = message
+    timer.color = color
+    timer.elapsed = 0
+    return timer
+}
+
+func StartTimer(message, color string) *Timer {
+    timer := new(Timer)
+    timer.message = message
+    timer.color = color
     timer.start = time.Now()
     return timer
 }

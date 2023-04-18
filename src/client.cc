@@ -54,7 +54,7 @@ namespace unbalanced_psi {
         }
     }
 
-    u64 Client::online(Channel channel) {
+    tuple<u64, u64> Client::online(Channel channel) {
 
         // send encrypted dataset
         vector<u8> request(encrypted.size() * Point::size);
@@ -86,8 +86,8 @@ namespace unbalanced_psi {
                 }
             }
         }
-        return found;
 
+        return std::make_tuple(found, u64(request.size() + response.size()));
     }
 
     void Client::to_file(std::string filename) {

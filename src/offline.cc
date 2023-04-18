@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 
         Client client(input);
 
-        Timer timer("[ client ] offline (1):\t");
+        Timer timer("[ client ] ddh offline (1)", BLUE);
         client.prepare_queries(server_n);
         timer.stop();
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 
         Server server(input);
 
-        Timer timer("[ server ] offline:\t");
+        Timer timer("[ server ] ddh offline", RED);
         server.offline();
         timer.stop();
 

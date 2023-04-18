@@ -27,7 +27,7 @@ func RunServer(input string, queries uint64) {
 
     ///////////////////////// OFFLINE /////////////////////////
 
-    timer := StartTimer("[ server ] pir offline:")
+    timer := StartTimer("[ server ] pir offline", RED)
 
     // decide protocol parameters and set up database
     protocol, params, ENTRY_BITS := SetupProtocol(dbSize, bucketSize)
@@ -53,9 +53,15 @@ func RunServer(input string, queries uint64) {
 
     timer.End()
 
+    ///////////////////////////////////////////////////////////
+
+    // wait until the client is ready for online
+    bytes = make([]byte, 1)
+    client.Read(bytes)
+
     ////////////////////////// ONLINE /////////////////////////
 
-    timer = StartTimer("[ server ] pir online:")
+    timer = StartTimer("[ server ] pir online", RED)
 
     // expected size of the query vector
     queryRows := params.M
@@ -65,6 +71,7 @@ func RunServer(input string, queries uint64) {
 		queryRows += db.Info.Squishing - (params.M % db.Info.Squishing)
 	}
 
+    answerTimer := CreateTimer("[ server ] pir answer", RED)
     for i := uint64(0); i < queries; i++ {
         // read in query vector
         bytes = make([]byte, queryRows * ELEMENT_SIZE)
@@ -72,12 +79,13 @@ func RunServer(input string, queries uint64) {
         query := BytesToMatrix(bytes, queryRows, 1)
 
         // generate answer and send to client
-        answerTimer := StartTimer("[ server ] pir answer:")
+        answerTimer.Start()
         answer := protocol.Answer(db, MakeMsgSlice(MakeMsg(query)), serverState, lweMatrix, *params)
-        answerTimer.End()
+        answerTimer.Stop()
 
         client.Write(MatrixToBytes(answer.Data[0]))
     }
 
     timer.End()
+    answerTimer.Print()
 }

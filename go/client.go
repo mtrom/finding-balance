@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/aes"
+    "fmt"
     "time"
     "net"
 
@@ -40,7 +41,7 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
     ///////////////////////// OFFLINE /////////////////////////
 
-    timer := StartTimer("[ client ] pir offline:")
+    timer := StartTimer("[ client ] pir offline", BLUE)
 
     // decide protocol parameters
     protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
@@ -68,10 +69,21 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
     timer.End()
 
+    ///////////////////////////////////////////////////////////
+
+    fmt.Printf("[  both  ] offline comm (MB)\t: %.4f\n", float64(len(bytes)) / 1000000)
+
+    // let the server know we're ready for online
+    bytes = []byte{1}
+    server.Write(bytes)
+
     ////////////////////////// ONLINE /////////////////////////
 
-    timer = StartTimer("[ client ] pir online:")
+    queryTimer := CreateTimer("[ client ] pir query", BLUE)
+    recoverTimer := CreateTimer("[ client ] pir recover", BLUE)
+    timer = StartTimer("[ client ] pir online", BLUE)
 
+    comm := 0;
     var results []uint64
     queried := map[uint64]struct{}{}
     for _, col := range queries {
@@ -81,16 +93,19 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         translated := col / (params.L / bucketSize)
 
         // generate the query vector and send to server
-        queryTimer := StartTimer("[ client ] pir query:")
+        queryTimer.Start()
         secret, query := protocol.Query(translated, lweMatrix, *params, dbInfo)
-        queryTimer.End()
+        queryTimer.Stop()
 
         bytes := MatrixToBytes(query.Data[0])
         server.Write(bytes)
+        comm += len(bytes)
 
         // read the query's answer
         bytes = make([]byte, params.L * ELEMENT_SIZE)
         server.Read(bytes)
+        comm += len(bytes)
+
         answer := BytesToMatrix(bytes, params.L, 1)
 
         // if we've already queried this column, don't bother recovering
@@ -101,7 +116,7 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         }
 
         // reconstruct the data based on the answer
-        recoverTimer := StartTimer("[ client ] pir recover:")
+        recoverTimer.Start()
         column := RecoverColumn(
             MakeMsg(hint),
             query,
@@ -110,14 +125,18 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
             *params,
             dbInfo,
         )
-        recoverTimer.End()
+        recoverTimer.Stop()
 
         results = append(results, column...)
     }
 
     timer.End()
+    queryTimer.Print()
+    recoverTimer.Print()
 
     ///////////////////////////////////////////////////////////
+
+    fmt.Printf("[  both  ] online comm (MB)\t: %.4f\n", float64(comm) / 1000000)
 
     WriteDatabase(output, results)
 }

@@ -129,21 +129,15 @@ namespace unbalanced_psi {
         return output;
     }
 
-    Timer::Timer(std::string msg) : message(msg) {
+    Timer::Timer(std::string msg, std::string color) : message(msg), color(color) {
         start = high_resolution_clock::now();
     }
 
     void Timer::stop() {
         auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<nanoseconds>(stop - start);
-        auto unit = "ns";
-
-        if (duration.count() > 1000000) {
-            auto ms = duration_cast<milliseconds>(duration);
-            unit = "ms";
-            std::cout << message << ms.count() << unit << std::endl;
-        } else {
-            std::cout << message << duration.count() << unit << std::endl;
-        }
+        duration<float, std::milli> elapsed = stop - start;
+        std::cout << std::fixed << std::setprecision(3);
+        std::cout << color << message << " (ms)\t: ";
+        std::cout << elapsed.count() << RESET << std::endl;
     }
 }
