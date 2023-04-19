@@ -71,7 +71,9 @@ echo -n -e $(cat test.edb.desc | tr -d '\n') > go/test.edb
 ```bash
 scp deploy.sh -i aws-key.pem ec2-user@<ip-address>
 ssh -i aws-key.pem ec2-user@<ip-address>
-ssh-keygen -t ed25519 -C "mtromanhauser@gmail.com"
-# & add public key to github
+ssh-keygen -t ed25519 -C "mtromanhauser@gmail.com" # & add public key to github
+sudo yum install git -y
+git clone git@github.com:mtrom/ddh-unbalanced-psi.git
+cp ddh-unbalanced-psi/deploy.sh ./
 ./deploy.sh
 ```
