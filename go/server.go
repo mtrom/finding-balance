@@ -47,7 +47,8 @@ func RunServer(input string, queries uint64) {
 
     // because the offline data is so large, it needs to be chunked
     for i := 0; i < len(offline); i += CHUNK_SIZE {
-        _, err = client.Write(offline[i:i+CHUNK_SIZE])
+        n, err := client.Write(offline[i:i+CHUNK_SIZE])
+        if n != CHUNK_SIZE { panic("offline chunk not written") }
         if err != nil { panic(err) }
     }
 
@@ -75,7 +76,9 @@ func RunServer(input string, queries uint64) {
     for i := uint64(0); i < queries; i++ {
         // read in query vector
         bytes = make([]byte, queryRows * ELEMENT_SIZE)
-        client.Read(bytes)
+        n, err := client.Read(bytes)
+        if n != len(bytes) { panic("query not read correctly") }
+        if err != nil { panic(err) }
         query := BytesToMatrix(bytes, queryRows, 1)
 
         // generate answer and send to client
@@ -83,7 +86,10 @@ func RunServer(input string, queries uint64) {
         answer := protocol.Answer(db, MakeMsgSlice(MakeMsg(query)), serverState, lweMatrix, *params)
         answerTimer.Stop()
 
-        client.Write(MatrixToBytes(answer.Data[0]))
+        answerBytes := MatrixToBytes(answer.Data[0])
+        n, err = client.Write(answerBytes)
+        if n != len(answerBytes) { panic("answer not written correctly") }
+        if err != nil { panic(err) }
     }
 
     timer.End()

@@ -52,7 +52,8 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     var bytes []byte
     for i := uint64(0); i < chunks; i += CHUNK_SIZE {
         chunk := make([]byte, CHUNK_SIZE)
-        _, err := server.Read(chunk)
+        n, err := server.Read(chunk)
+        if n != CHUNK_SIZE { panic("offline chunk not read") }
         if err != nil { panic(err) }
         bytes = append(bytes, chunk...)
     }
@@ -98,12 +99,16 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         queryTimer.Stop()
 
         bytes := MatrixToBytes(query.Data[0])
-        server.Write(bytes)
+        n, err := server.Write(bytes)
+        if n != len(bytes) { panic("query not written correctly") }
+        if err != nil { panic(err) }
         comm += len(bytes)
 
         // read the query's answer
         bytes = make([]byte, params.L * ELEMENT_SIZE)
-        server.Read(bytes)
+        n, err = server.Read(bytes)
+        if n != len(bytes) { panic("answer not read correctly") }
+        if err != nil { panic(err) }
         comm += len(bytes)
 
         answer := BytesToMatrix(bytes, params.L, 1)
