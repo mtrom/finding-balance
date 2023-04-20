@@ -3,7 +3,6 @@ package main
 import (
     "io/ioutil"
     "log"
-    "math"
     "os"
     "strconv"
 )
@@ -25,10 +24,10 @@ func main() {
     log.SetOutput(ioutil.Discard)
 
     if os.Args[1] == "client" {
-        serverN, _ := strconv.ParseFloat(os.Args[2], 64)
+        serverLog, _ := strconv.ParseUint(os.Args[2], 10, 64)
 
-        bucketSize := POINT_SIZE * uint64(math.Log2(serverN))
-        dbSize := uint64(serverN) * bucketSize
+        bucketSize := POINT_SIZE * serverLog
+        dbSize := uint64(1 << serverLog) * bucketSize
 
         if len(os.Args) < 5 {
             RunClient("out/queries.db", "out/answer.edb", dbSize, bucketSize)
@@ -38,9 +37,9 @@ func main() {
     } else if os.Args[1] == "server" {
         queries, _ := strconv.ParseUint(os.Args[2], 10, 64)
         if len(os.Args) < 4 {
-            RunServer("out/server.edb", queries)
+            RunServer("out/server.edb", 1 << queries)
         } else {
-            RunServer(os.Args[3], queries)
+            RunServer(os.Args[3], 1 << queries)
         }
     } else {
         RunBoth(os.Args[1], os.Args[2], os.Args[3])

@@ -17,12 +17,12 @@ int main(int argc, char *argv[]) {
     if (parser.isSet("client") || parser.isSet("-client")) {
         auto input = parser.getOr<std::string>("-db", "out/client.db");
         auto output = parser.getOr<std::string>("-out", "out/queries.db");
-        auto server_n = parser.get<u64>("-server-n");
+        auto server_log = parser.get<u64>("-server-log");
 
         Client client(input);
 
         Timer timer("[ client ] ddh offline (1)", BLUE);
-        client.prepare_queries(server_n);
+        client.prepare_queries(1 << server_log);
         timer.stop();
 
         client.to_file(output);
