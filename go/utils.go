@@ -56,17 +56,21 @@ func WriteOverNetwork(conn net.Conn, data []byte) {
         return
     }
 
-    for i := uint64(0);; i += CHUNK_SIZE {
-        if i + CHUNK_SIZE > size {
-            n, err := conn.Write(data[i:])
-            if uint64(n) != size - i { panic("entire chunk not written") }
-            if err != nil { panic(err) }
+    i := uint64(0)
+    for {
+        var chunk []byte
+
+        if i >= size  {
             break
+        } else if i + CHUNK_SIZE > size {
+            chunk = data[i:]
         } else {
-            n, err := conn.Write(data[i:i+CHUNK_SIZE])
-            if uint64(n) != CHUNK_SIZE { panic("entire chunk not written") }
-            if err != nil { panic(err) }
+            chunk = data[i:i+CHUNK_SIZE]
         }
+
+        n, err := conn.Write(chunk)
+        if err != nil { panic(err) }
+        i += uint64(n)
     }
 }
 
@@ -82,21 +86,21 @@ func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
     }
 
     var data []byte
-    for i := uint64(0);; i += CHUNK_SIZE {
-        if i + CHUNK_SIZE > size {
-            chunk := make([]byte, size - i)
-            n, err := conn.Read(chunk)
-            if uint64(n) != size - i { panic("entire chunk not read") }
-            if err != nil { panic(err) }
-            data = append(data, chunk...)
+    i := uint64(0)
+    for {
+        var chunk []byte
+
+        if i >= size {
             break
+        } else if i + CHUNK_SIZE > size {
+            chunk = make([]byte, size - i)
         } else {
-            chunk := make([]byte, CHUNK_SIZE)
-            n, err := conn.Read(chunk)
-            if uint64(n) != CHUNK_SIZE { panic("entire chunk not read") }
-            if err != nil { panic(err) }
-            data = append(data, chunk...)
+            chunk = make([]byte, CHUNK_SIZE)
         }
+        n, err := conn.Read(chunk)
+        if err != nil { panic(err) }
+        data = append(data, chunk[:n]...)
+        i += uint64(n)
     }
 
     if uint64(len(data)) != size {
