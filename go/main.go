@@ -11,7 +11,6 @@ import (
 const (
     SERVER_HOST = "localhost:1122"
     SERVER_TYPE = "tcp"
-    CHUNK_SIZE  = 512
 )
 
 func RunBoth(dbFn, queriesFn, outputFn string) {

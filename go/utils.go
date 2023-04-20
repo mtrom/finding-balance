@@ -7,6 +7,7 @@ import (
     "fmt"
     "io"
     "log"
+    "net"
     "os"
     "time"
 
@@ -18,6 +19,9 @@ const POINT_SIZE uint64 = 33
 
 // size of a matrix element in bytes
 const ELEMENT_SIZE = 4
+
+// largest datasize to send at once
+const CHUNK_SIZE = 512
 
 const RED   = "\033[0;31m"
 const GREEN = "\033[0;32m"
@@ -39,6 +43,66 @@ func toHex(bytes []byte, size uint64) string {
         output[(2 * i) + 1] = digits[(bytes[i] >> 4) & 0x0F]
     }
     return string(output)
+}
+
+/**
+ * send data over a network connection, chunking if neccesary
+ */
+func WriteOverNetwork(conn net.Conn, data []byte) {
+    size := uint64(len(data))
+    if size < CHUNK_SIZE {
+        conn.Write(data)
+        return
+    }
+
+    for i := uint64(0);; i += CHUNK_SIZE {
+        if i + CHUNK_SIZE > size {
+            n, err := conn.Write(data[i:])
+            if uint64(n) != size - i { panic("entire chunk not written") }
+            if err != nil { panic(err) }
+            break
+        } else {
+            n, err := conn.Write(data[i:i+CHUNK_SIZE])
+            if uint64(n) != CHUNK_SIZE { panic("entire chunk not written") }
+            if err != nil { panic(err) }
+        }
+    }
+}
+
+/**
+ * read data from a network connection, chunking if neccesary
+ */
+func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
+
+    if size < CHUNK_SIZE {
+        data := make([]byte, size)
+        conn.Read(data)
+        return data
+    }
+
+    var data []byte
+    for i := uint64(0);; i += CHUNK_SIZE {
+        if i + CHUNK_SIZE > size {
+            chunk := make([]byte, size - i)
+            n, err := conn.Read(chunk)
+            if uint64(n) != size - i { panic("entire chunk not read") }
+            if err != nil { panic(err) }
+            data = append(data, chunk...)
+            break
+        } else {
+            chunk := make([]byte, CHUNK_SIZE)
+            n, err := conn.Read(chunk)
+            if uint64(n) != CHUNK_SIZE { panic("entire chunk not read") }
+            if err != nil { panic(err) }
+            data = append(data, chunk...)
+        }
+    }
+
+    if uint64(len(data)) != size {
+        panic("somehow read incorrect size of data")
+    }
+
+    return data
 }
 
 /**

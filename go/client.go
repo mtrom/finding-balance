@@ -47,22 +47,14 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
     dbInfo := SetupDBInfo(dbSize, entryBits, params)
 
-    // read in the 'offline' data in chunks (i.e., lwe matrix seed and hint)
-    chunks := aes.BlockSize + params.L * params.N * ELEMENT_SIZE
-    var bytes []byte
-    for i := uint64(0); i < chunks; i += CHUNK_SIZE {
-        chunk := make([]byte, CHUNK_SIZE)
-        n, err := server.Read(chunk)
-        if n != CHUNK_SIZE { panic("offline chunk not read") }
-        if err != nil { panic(err) }
-        bytes = append(bytes, chunk...)
-    }
+    // read in the 'offline' data (i.e., lwe matrix seed and hint)
+    offline := ReadOverNetwork(server, aes.BlockSize + params.L * params.N * ELEMENT_SIZE)
 
-    hint := BytesToMatrix(bytes[aes.BlockSize:], params.L, params.N)
+    hint := BytesToMatrix(offline[aes.BlockSize:], params.L, params.N)
 
     // this seeds the randomness when generating the lwe matrix
     var seed PRGKey
-    copy(seed[:], bytes[:aes.BlockSize])
+    copy(seed[:], offline[:aes.BlockSize])
     bufPrgReader = NewBufPRG(NewPRG(&seed))
 
     // generate the lwe matrix from the seed
@@ -72,11 +64,11 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
     ///////////////////////////////////////////////////////////
 
-    fmt.Printf("[  both  ] offline comm (MB)\t: %.4f\n", float64(len(bytes)) / 1000000)
+    fmt.Printf("[  both  ] offline comm (MB)\t: %.4f\n", float64(len(offline)) / 1000000)
 
     // let the server know we're ready for online
-    bytes = []byte{1}
-    server.Write(bytes)
+    ready := []byte{1}
+    server.Write(ready)
 
     ////////////////////////// ONLINE /////////////////////////
 
@@ -98,20 +90,15 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         secret, query := protocol.Query(translated, lweMatrix, *params, dbInfo)
         queryTimer.Stop()
 
-        bytes := MatrixToBytes(query.Data[0])
-        n, err := server.Write(bytes)
-        if n != len(bytes) { panic("query not written correctly") }
-        if err != nil { panic(err) }
-        comm += len(bytes)
+        data := MatrixToBytes(query.Data[0])
+        WriteOverNetwork(server, data)
+        comm += len(data)
 
         // read the query's answer
-        bytes = make([]byte, params.L * ELEMENT_SIZE)
-        n, err = server.Read(bytes)
-        if n != len(bytes) { panic("answer not read correctly") }
-        if err != nil { panic(err) }
-        comm += len(bytes)
+        data = ReadOverNetwork(server, params.L * ELEMENT_SIZE)
+        comm += len(data)
 
-        answer := BytesToMatrix(bytes, params.L, 1)
+        answer := BytesToMatrix(data, params.L, 1)
 
         // if we've already queried this column, don't bother recovering
         if _, already_queried := queried[translated]; already_queried {
