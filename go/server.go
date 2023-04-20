@@ -29,9 +29,14 @@ func RunServer(input string, queries uint64) {
 
     timer := StartTimer("[ server ] pir offline", RED)
 
+    subtimer := StartTimer("[ server ] build database", GREEN)
+
     // decide protocol parameters and set up database
     protocol, params, ENTRY_BITS := SetupProtocol(dbSize, bucketSize)
     db := CreateDatabase(dbSize, ENTRY_BITS, params, values)
+
+    subtimer.End()
+    subtimer = StartTimer("[ server ] lwe + hint", GREEN)
 
     // sample seed for lwe random matrix A
     lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
@@ -39,22 +44,33 @@ func RunServer(input string, queries uint64) {
     // calculate hint seed
     serverState, hint := protocol.Setup(db, lweMatrix, *params)
 
+    subtimer.End()
+    subtimer = StartTimer("[ server ] prepare data", GREEN)
+
     // gather lwe matrix seed and hint into 'offline' dataset
     var bytes = make([]byte, aes.BlockSize)
     ptr := *seed.Seed
     copy(bytes[:], ptr[:])
     offline := append(bytes, MatrixToBytes(hint.Data[0])...)
 
+    subtimer.End()
+    subtimer = StartTimer("[ server ] send data", GREEN)
+
+    // let the client know we're ready for offline
+    ready := []byte{1}
+    client.Write(ready)
+
     // because the offline data is so large, it needs to be chunked
     WriteOverNetwork(client, offline)
 
+    subtimer.End()
     timer.End()
 
     ///////////////////////////////////////////////////////////
 
     // wait until the client is ready for online
-    bytes = make([]byte, 1)
-    client.Read(bytes)
+    ready = make([]byte, 1)
+    client.Read(ready)
 
     ////////////////////////// ONLINE /////////////////////////
 

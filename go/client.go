@@ -43,12 +43,26 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
     timer := StartTimer("[ client ] pir offline", BLUE)
 
+    subtimer := StartTimer("[ client ] pick params", YELLOW)
     // decide protocol parameters
     protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
     dbInfo := SetupDBInfo(dbSize, entryBits, params)
 
+    subtimer.End()
+    timer.Stop()
+
+    // wait until the client is ready for offline
+    ready := make([]byte, 1)
+    server.Read(ready)
+
+    timer.Start()
+    subtimer = StartTimer("[ client ] read data", YELLOW)
+
     // read in the 'offline' data (i.e., lwe matrix seed and hint)
     offline := ReadOverNetwork(server, aes.BlockSize + params.L * params.N * ELEMENT_SIZE)
+
+    subtimer.End()
+    subtimer = StartTimer("[ client ] prepare data", YELLOW)
 
     hint := BytesToMatrix(offline[aes.BlockSize:], params.L, params.N)
 
@@ -60,6 +74,7 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     // generate the lwe matrix from the seed
     lweMatrix := protocol.DecompressState(dbInfo, *params, MakeCompressedState(&seed))
 
+    subtimer.End()
     timer.End()
 
     ///////////////////////////////////////////////////////////
@@ -67,7 +82,7 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
     fmt.Printf("[  both  ] offline comm (MB)\t: %.4f\n", float64(len(offline)) / 1000000)
 
     // let the server know we're ready for online
-    ready := []byte{1}
+    ready = []byte{1}
     server.Write(ready)
 
     ////////////////////////// ONLINE /////////////////////////
@@ -98,14 +113,14 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
         data = ReadOverNetwork(server, params.L * ELEMENT_SIZE)
         comm += len(data)
 
-        answer := BytesToMatrix(data, params.L, 1)
-
         // if we've already queried this column, don't bother recovering
         if _, already_queried := queried[translated]; already_queried {
             continue;
         } else {
             queried[translated] = struct{}{}
         }
+
+        answer := BytesToMatrix(data, params.L, 1)
 
         // reconstruct the data based on the answer
         recoverTimer.Start()

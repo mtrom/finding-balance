@@ -23,12 +23,13 @@ const ELEMENT_SIZE = 4
 // largest datasize to send at once
 const CHUNK_SIZE = 512
 
-const RED   = "\033[0;31m"
-const GREEN = "\033[0;32m"
-const BLUE  = "\033[0;34m"
-const CYAN  = "\033[0;36m"
-const WHITE = "\033[0;37m"
-const RESET = "\033[0m"
+const RED    = "\033[0;31m"
+const GREEN  = "\033[0;32m"
+const YELLOW = "\033[0;33m"
+const BLUE   = "\033[0;34m"
+const CYAN   = "\033[0;36m"
+const WHITE  = "\033[0;37m"
+const RESET  = "\033[0m"
 
 
 /**
