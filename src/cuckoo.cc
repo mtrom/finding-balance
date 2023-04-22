@@ -52,14 +52,16 @@ namespace unbalanced_psi {
         vector<u64> indexes;
         for (auto hash_n = 0; hash_n < hashes; hash_n++) {
             u64 index = hash(element, hash_n);
-            table[index].push_back(element);
-            size++;
 
             if (std::find(indexes.begin(), indexes.end(), index) != indexes.end()) {
-                throw std::runtime_error("collision in hash different functions");
+                // TODO: should we?
+                // throw std::runtime_error("collision in hash different functions");
+                continue;
             }
 
+            table[index].push_back(element);
             indexes.push_back(index);
+            size++;
         }
     }
 
