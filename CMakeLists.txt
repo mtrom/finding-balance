@@ -42,8 +42,10 @@ target_link_libraries(online oc::cryptoTools)
 # test c++ library
 add_executable(tests
     ${PROJECT_SOURCE_DIR}/src/tests/test_all.cc
+    ${PROJECT_SOURCE_DIR}/src/tests/test_cuckoo.cc
     ${PROJECT_SOURCE_DIR}/src/tests/test_hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/tests/test_utils.cc
+    ${PROJECT_SOURCE_DIR}/src/cuckoo.cc
     ${PROJECT_SOURCE_DIR}/src/hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/utils.cc
 )
