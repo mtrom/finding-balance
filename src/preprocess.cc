@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 
         vector<INPUT_TYPE> dataset = read_dataset(input);
 
-        Timer timer("[ client ] cuckoo pre-process", BLUE);
+        Timer timer("[ client ] cuckoo hash", BLUE);
         for (auto element : dataset) {
             cuckoo.insert(element);
         }
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
         vector<INPUT_TYPE> dataset = read_dataset(input);
 
-        Timer timer("[ server ] cuckoo pre-process", RED);
+        Timer timer("[ server ] cuckoo hash", RED);
         for (auto element : dataset) {
             cuckoo.insert_all(element);
         }

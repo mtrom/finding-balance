@@ -10,19 +10,15 @@ namespace unbalanced_psi {
             hashtable.resize(dataset.size());
         } else {
             hashtable.from_file(filename);
-
-            // this would have been done in offline already
-            PRNG prng(seed);
-            key.randomize(prng);
         }
-    }
-
-#if OFFLINE_THREADS == 1
-    void Server::offline() {
 
         // randomly sample secret key
         PRNG prng(seed);
         key.randomize(prng);
+    }
+
+#if OFFLINE_THREADS == 1
+    void Server::offline() {
 
         // hash elements in dataset
         for (auto i = 0; i < dataset.size(); i++) {

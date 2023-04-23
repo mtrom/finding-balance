@@ -71,6 +71,9 @@ namespace unbalanced_psi {
         PRNG prng(seed);
 
         for (u64 index = 0; index < table.size(); index++) {
+            if (table[index].size() > to) {
+                throw std::runtime_error("cuckoo bucket already exceeded padding");
+            }
             while (table[index].size() < to) {
                 table[index].push_back(prng.get<INPUT_TYPE>());
                 size++;

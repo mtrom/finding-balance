@@ -12,6 +12,7 @@
 #include <cryptoTools/Network/IOService.h>
 
 #define PADDING_SEED 1986
+#define MAX_THREADS 32
 
 namespace unbalanced_psi {
 
