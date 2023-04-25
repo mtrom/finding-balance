@@ -6,8 +6,15 @@
 
 
 #define SERVER_SEED 406
-#define OFFLINE_THREADS 1
+#define SERVER_OFFLINE_THREADS 1
 
+#define SERVER_OFFLINE_INPUT  "out/server.db"
+#define SERVER_OFFLINE_OUTPUT "out/server.edb"
+
+#define SERVER_OFFLINE_INPUT_PREFIX "out/"
+#define SERVER_OFFLINE_INPUT_SUFFIX "/server.db"
+#define SERVER_OFFLINE_OUTPUT_PREFIX "out/"
+#define SERVER_OFFLINE_OUTPUT_SUFFIX "/server.edb"
 
 namespace unbalanced_psi {
 
@@ -33,6 +40,18 @@ namespace unbalanced_psi {
         public:
 
         /**
+         * run the server's offline portion of the protocol
+         */
+        static void run_offline();
+
+        /**
+         * run many server offlines for each cuckoo hash bucket
+         *
+         * @params <instances> number of cuckoo buckets being run
+         */
+        static void run_offline(u64 instances);
+
+        /**
          * @params <filename> filename for dataset
          * @params <encrypted> true if the data is already encrypted
          * @params <seed> seed for randomness in selecting private key
@@ -53,7 +72,7 @@ namespace unbalanced_psi {
          */
         void offline();
 
-#if OFFLINE_THREADS != 1
+#if SERVER_OFFLINE_THREADS != 1
         /**
          * prepare a partial hashset
          *

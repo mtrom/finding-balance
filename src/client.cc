@@ -30,6 +30,50 @@ namespace unbalanced_psi {
         file.read((char*) answer.data(), filesize);
     }
 
+    void Client::run_prep_queries(u64 server_log) {
+        Client client(CLIENT_QUERY_INPUT);
+
+        Timer timer("[ client ] ddh offline (1)", BLUE);
+        client.prepare_queries(1 << server_log);
+        timer.stop();
+
+        client.to_file(CLIENT_QUERY_OUTPUT);
+    }
+
+    void Client::run_prep_queries(u64 server_log, u64 instances) {
+        // if only one instance just do it directly
+        if (instances == 1) {
+            return Client::run_prep_queries(server_log);
+        }
+
+        vector<Client> clients;
+        for (auto i = 0; i < instances; i++) {
+            clients.push_back(
+                Client(
+                    CLIENT_QUERY_INPUT_PREFIX
+                    + std::to_string(i)
+                    + CLIENT_QUERY_INPUT_SUFFIX
+                )
+            );
+        }
+
+        // since this is such a small operation, multithreading
+        // won't yield much improvement
+        Timer timer("[ client ] ddh offline (1)", BLUE);
+        for (auto i = 0; i < instances; i++) {
+            clients[i].prepare_queries(1 << server_log);
+        }
+        timer.stop();
+
+        for (auto i = 0; i < instances; i++) {
+            clients[i].to_file(
+                CLIENT_QUERY_OUTPUT_PREFIX
+                + std::to_string(i)
+                + CLIENT_QUERY_OUTPUT_SUFFIX
+            );
+        }
+    }
+
 
     void Client::prepare_queries(u64 server_size) {
 

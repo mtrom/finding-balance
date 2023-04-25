@@ -6,6 +6,14 @@
 
 #define CLIENT_SEED 18
 
+#define CLIENT_QUERY_INPUT  "out/client.db"
+#define CLIENT_QUERY_OUTPUT "out/queries.db"
+
+#define CLIENT_QUERY_INPUT_PREFIX "out/"
+#define CLIENT_QUERY_INPUT_SUFFIX "/client.db"
+#define CLIENT_QUERY_OUTPUT_PREFIX "out/"
+#define CLIENT_QUERY_OUTPUT_SUFFIX "/queries.db"
+
 namespace unbalanced_psi {
 
     class Client {
@@ -30,6 +38,22 @@ namespace unbalanced_psi {
 
 
         public:
+
+        /**
+         * run client's pir query preparation
+         *
+         * @params <server_log> log of the server's dataset size
+         */
+        static void run_prep_queries(u64 server_log);
+
+        /**
+         * run many client's pir query preparation for each cuckoo bucket
+         *
+         * @params <server_log> log of the server's dataset size
+         * @params <instances> number of cuckoo buckets being run
+         */
+        static void run_prep_queries(u64 server_log, u64 instances);
+
         /**
          * @params <db_file> filename for dataset
          */
