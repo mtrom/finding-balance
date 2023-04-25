@@ -7,7 +7,8 @@ namespace unbalanced_psi {
     Server::Server(std::string filename, bool encrypted, uint64_t s) : seed(s) {
         if (!encrypted) {
             dataset = read_dataset(filename);
-            hashtable.resize(dataset.size());
+            auto [table_size, max_bucket] = Hashtable::get_params(u64(dataset.size()));
+            hashtable.resize(table_size, max_bucket);
         } else {
             hashtable.from_file(filename);
         }

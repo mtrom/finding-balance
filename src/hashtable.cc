@@ -9,20 +9,38 @@
 
 namespace unbalanced_psi {
 
-    Hashtable::Hashtable() : size(0) {
+    Hashtable::Hashtable() : size(0), max_bucket(0) {
     }
 
-    Hashtable::Hashtable(u64 buckets) : size(0) {
-        resize(buckets);
+    Hashtable::Hashtable(u64 buckets, u64 max) : size(0), max_bucket(max) {
+        resize(buckets, max_bucket);
     };
 
     Hashtable::Hashtable(std::string filename) {
         from_file(filename);
     };
 
-    void Hashtable::resize(u64 buckets) {
+    void Hashtable::resize(u64 buckets, u64 max) {
+        max_bucket = max;
         table.clear();
         table.resize(buckets, vector<Point>());
+    }
+
+
+    std::tuple<u64, u64> Hashtable::get_params(u64 server_size) {
+        if (server_size == 1 << 20) {
+            return std::make_tuple(1 << 18, 28);
+        } else if (server_size == 1 << 22) {
+            return std::make_tuple(1 << 20, 28);
+        } else if (server_size == 1 << 24) {
+            return std::make_tuple(1 << 22, 28);
+        } else if (server_size == 1 << 26) {
+            return std::make_tuple(1 << 23, 40);
+        } else if (server_size == 1 << 28) {
+            return std::make_tuple(1 << 23, 96);
+        } else {
+            return std::make_tuple(server_size, u64(log2(server_size)));
+        }
     }
 
     u64 Hashtable::hash(INPUT_TYPE element, u64 table_size) {
@@ -37,20 +55,19 @@ namespace unbalanced_psi {
         table[index].push_back(encrypted);
         size++;
 
-        if (table[index].size() > log2(table.size())) {
-            // std::clog << "more than log2(size) collisions" << std::endl;
-            throw std::overflow_error("more than log2(size) collisions");
+        if (table[index].size() > max_bucket) {
+            throw std::overflow_error("more than max_bucket collisions");
         }
     }
 
-    void Hashtable::pad(u64 min_bucket, u64 max_bucket) {
+    void Hashtable::pad(u64 min, u64 max) {
         auto before = size;
 
         block seed(PADDING_SEED);
         PRNG prng(seed);
 
-        for (u64 i = min_bucket; i < max_bucket; i++) {
-            while (table[i].size() < log2(table.size())) {
+        for (u64 i = min; i < max; i++) {
+            while (table[i].size() < max_bucket) {
                 Point random_element(prng);
                 table[i].push_back(random_element);
                 size++;
@@ -115,7 +132,7 @@ namespace unbalanced_psi {
         u64 bucket_bytes;
         file.read((char*) &buckets, sizeof(u64));
         file.read((char*) &bucket_bytes, sizeof(u64));
-        u64 bucket_size = bucket_bytes / Point::size;
+        max_bucket = bucket_bytes / Point::size;
 
         size = 0;
         table.clear();
@@ -131,7 +148,7 @@ namespace unbalanced_psi {
             Point element;
             element.fromBytes(ptr);
 
-            u64 index = size / bucket_size;
+            u64 index = size / max_bucket;
             table[index].push_back(element);
             size++;
         }
@@ -139,14 +156,6 @@ namespace unbalanced_psi {
 
     u64 Hashtable::buckets() {
         return table.size();
-    }
-
-    int Hashtable::max_bucket() {
-        int collisions = 0;
-        for (vector<Point> bucket : table) {
-            if (collisions < bucket.size()) { collisions = bucket.size(); }
-        }
-        return collisions;
     }
 
     void Hashtable::concat(Hashtable other) {

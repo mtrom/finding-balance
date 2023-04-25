@@ -8,12 +8,15 @@ namespace unbalanced_psi {
         public:
         vector<vector<Point>> table;
         u64 size;
+        u64 max_bucket;
 
         Hashtable();
-        Hashtable(u64 buckets);
+        Hashtable(u64 buckets, u64 max_bucket);
         Hashtable(std::string filename);
 
-        void resize(u64 buckets);
+        void resize(u64 buckets, u64 max_bucket);
+
+        static std::tuple<u64, u64> get_params(u64 server_size);
 
         static u64 hash(INPUT_TYPE element, u64 table_size);
 
@@ -34,10 +37,5 @@ namespace unbalanced_psi {
         void concat(Hashtable other);
 
         void log();
-
-        /**
-         * @return bucket with most collisions
-         */
-        int max_bucket();
     };
 }

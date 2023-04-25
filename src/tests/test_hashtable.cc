@@ -38,6 +38,7 @@ namespace unbalanced_psi {
     void test_hashtable_insert_one() {
         INPUT_TYPE element = 42;
         u64 TABLE_SIZE = 1024;
+        u64 MAX_BUCKET = 10;
 
         Curve curve;
         Point encrypted = hash_to_group_element(element);
@@ -45,7 +46,7 @@ namespace unbalanced_psi {
         vector<Point> expected{ encrypted };
         u64 hashvalue = Hashtable::hash(element, TABLE_SIZE);
 
-        Hashtable hashtable(TABLE_SIZE);
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
         hashtable.insert(element, encrypted);
 
         if (hashtable.table[hashvalue] != expected) {
@@ -55,11 +56,12 @@ namespace unbalanced_psi {
 
     void test_hashtable_insert_many() {
         u64 TABLE_SIZE = 16;
+        u64 MAX_BUCKET = 10;
         u64 TARGET_HASH = 5;
         u64 TARGET_ELEMENTS = 2;
 
         Curve curve;
-        Hashtable hashtable(TABLE_SIZE);
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
 
         vector<Point> expected;
 
@@ -70,7 +72,7 @@ namespace unbalanced_psi {
             try {
                 hashtable.insert(element, encrypted);
             } catch (std::overflow_error err) {
-                // expect to overflow the log2 bounds here
+                // expect to overflow the max_bucket bounds here
             }
 
             if (Hashtable::hash(element, TABLE_SIZE) == TARGET_HASH) {
@@ -94,42 +96,42 @@ namespace unbalanced_psi {
 
     void test_hashtable_pad_empty() {
         u64 TABLE_SIZE = 8;
-        u64 expected = 3;
+        u64 MAX_BUCKET = 3;
 
-        Hashtable hashtable(TABLE_SIZE);
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
         hashtable.pad();
 
         for (int i = 0; i < hashtable.buckets(); i++) {
-            if (hashtable.table[i].size() != expected) {
-                throw UnitTestFail("at least one bucket not padded to log2 size");
+            if (hashtable.table[i].size() != MAX_BUCKET) {
+                throw UnitTestFail("at least one bucket not padded to max bucket size");
             }
         }
     }
 
     void test_hashtable_pad_one() {
         u64 TABLE_SIZE = 16;
-        u64 expected = 4;
+        u64 MAX_BUCKET = 4;
 
         Curve curve;
         INPUT_TYPE element = 42;
         Point encrypted = hash_to_group_element(element);
 
-        Hashtable hashtable(TABLE_SIZE);
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
         hashtable.insert(element, encrypted);
         hashtable.pad();
 
         for (int i = 0; i < hashtable.buckets(); i++) {
-            if (hashtable.table[i].size() != expected) {
-                throw UnitTestFail("at least one bucket not padded to log2 size");
+            if (hashtable.table[i].size() != MAX_BUCKET) {
+                throw UnitTestFail("at least one bucket not padded to max bucket size");
             }
         }
     }
 
     void test_hashtable_pad_many() {
         u64 TABLE_SIZE = 16;
-        u64 expected = 4;
+        u64 MAX_BUCKET = 10;
 
-        Hashtable hashtable(TABLE_SIZE);
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
 
         Curve curve;
         for (INPUT_TYPE i = 0; i < TABLE_SIZE; i++) {
@@ -140,8 +142,8 @@ namespace unbalanced_psi {
         hashtable.pad();
 
         for (int i = 0; i < hashtable.buckets(); i++) {
-            if (hashtable.table[i].size() != expected) {
-                throw UnitTestFail("at least one bucket not padded to log2 size");
+            if (hashtable.table[i].size() != MAX_BUCKET) {
+                throw UnitTestFail("at least one bucket not padded to max bucket size");
             }
         }
     }
@@ -164,11 +166,12 @@ namespace unbalanced_psi {
 
     void test_hashtable_to_from_file() {
         u64 TABLE_SIZE = 8;
+        u64 MAX_BUCKET = 3;
         vector<INPUT_TYPE> elements{ 0, 1, 2, 3, 4, 5, 6, 7 };
         std::string FILENAME = "/tmp/dataset.edb";
 
         Curve curve;
-        Hashtable expected(TABLE_SIZE);
+        Hashtable expected(TABLE_SIZE, MAX_BUCKET);
         for (INPUT_TYPE element : elements) {
             Point encrypted = hash_to_group_element(element);
             expected.insert(element, encrypted);
@@ -201,19 +204,19 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_shuffle() {
-        u64 TABLE_SIZE = 32;
+        u64 TABLE_SIZE = 1;
+        u64 MAX_BUCKET = 1000;
 
         Curve curve;
         INPUT_TYPE element = 42;
         Point encrypted = hash_to_group_element(element);
-        u64 index = Hashtable::hash(element, TABLE_SIZE);
 
-        Hashtable hashtable(TABLE_SIZE);
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
         hashtable.insert(element, encrypted);
         hashtable.pad();
         hashtable.shuffle();
 
-        auto bucket = hashtable.table[index];
+        auto bucket = hashtable.table[0];
         bool found = false;
 
         for (auto i = 0; i < bucket.size(); i++) {
