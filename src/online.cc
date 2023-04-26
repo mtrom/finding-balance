@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     } else if (parser.isSet("server") || parser.isSet("-server")) {
         auto input = parser.getOr<std::string>("-db", "out/server.edb");
 
-        Server server(input, true);
+        Server server;
 
         // set up network connections
         Session session(ios, "127.0.0.1:1212", SessionMode::Server, "pirpsi");

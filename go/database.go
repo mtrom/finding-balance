@@ -1,8 +1,6 @@
 package main
 
 import (
-    "math"
-
     . "github.com/ahenzinger/simplepir/pir"
 )
 
@@ -10,35 +8,21 @@ import (
  * get the db dimensions given db size and plaintext modulo
  *  modified from pir.Database.ApproxSquareDatabaseDims() to factor in bucket size
  *
- * @param <dbSize> number of entries in the database
- * @param <bucketSize> number of entries per bucket
+ * @param <psiParams> params of the greater psi protocol
  * @param <entryBits> number of bits to represent an entry
  * @param <ptMod> plaintext modulo (or p)
  */
-func GetDatabaseDims(dbSize, bucketSize, entryBits, ptMod uint64) (uint64, uint64) {
+func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uint64) {
 
-    ptElems, ptPerEntry, _ := Num_DB_entries(dbSize, entryBits, ptMod)
+    ptElems, ptPerEntry, _ := Num_DB_entries(psiParams.DBBytes(), entryBits, ptMod)
 
-    bucketSize *= ptPerEntry
+    rows := psiParams.BucketsPerCol * psiParams.BucketBytes() * ptPerEntry
+    cols := psiParams.DBBytes() * ptPerEntry / rows
 
-    rows := uint64(math.Floor(math.Sqrt(float64(ptElems))))
+    if entryBits != uint64(8) { panic("unsupported for now") }
+    if rows * cols < ptElems { panic("don't expect this to happen") }
 
-    // ensure the number of rows per column is a multiple of the bucket size
-    if rows < bucketSize {
-        rows = bucketSize
-    } else if rows % bucketSize > bucketSize / 2 {
-        rows += (bucketSize - (rows % bucketSize))
-    } else {
-        rows -= rows % bucketSize
-    }
-
-    if rows % ptPerEntry != 0 {
-        panic("don't expect this to be possible with proper bucket size")
-    }
-
-	cols := uint64(math.Ceil(float64(ptElems) / float64(rows)))
-
-	return rows, cols
+    return rows, cols
 }
 
 
@@ -103,16 +87,16 @@ func CreateDatabase(dbSize, entryBits uint64, params *Params, values []uint64) *
  * @param <entryBits> number of bits to represent an entry
  * @param <params> protocol parameters
  */
-func SetupDBInfo(dbSize, entryBits uint64, params *Params) (DBinfo) {
+func SetupDBInfo(psiParams *PSIParams, entryBits uint64, params *Params) (DBinfo) {
 
     var info DBinfo
 
-	info.Num = dbSize
+	info.Num = psiParams.DBBytes()
 	info.Row_length = entryBits
 	info.P = params.P
 	info.Logq = params.Logq
 
-	ptElems, ptPerEntry, entryPerPt := Num_DB_entries(dbSize, entryBits, params.P)
+	ptElems, ptPerEntry, entryPerPt := Num_DB_entries(psiParams.DBBytes(), entryBits, params.P)
 	info.Ne = ptPerEntry
 	info.X = info.Ne
 	info.Packing = entryPerPt

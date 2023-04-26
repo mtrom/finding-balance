@@ -6,22 +6,21 @@
 
 namespace unbalanced_psi {
 
-    Server::Server(std::string filename, bool encrypted, uint64_t s) : seed(s) {
-        if (!encrypted) {
-            dataset = read_dataset(filename);
-            auto [table_size, max_bucket] = Hashtable::get_params(u64(dataset.size()));
-            hashtable.resize(table_size, max_bucket);
-        } else {
-            hashtable.from_file(filename);
-        }
-
+    Server::Server(std::string filename, u64 hashtable_size, u64 bucket_size)
+        : dataset(read_dataset(filename)), hashtable(hashtable_size, bucket_size) {
         // randomly sample secret key
-        PRNG prng(seed);
+        PRNG prng(SERVER_SEED);
         key.randomize(prng);
     }
 
-    void Server::run_offline() {
-        Server server(SERVER_OFFLINE_INPUT);
+    Server::Server() {
+        // randomly sample secret key
+        PRNG prng(SERVER_SEED);
+        key.randomize(prng);
+    }
+
+    void Server::run_offline(u64 hashtable_size, u64 bucket_size) {
+        Server server(SERVER_OFFLINE_INPUT, hashtable_size, bucket_size);
 
         Timer timer("[ server ] ddh offline", RED);
         server.offline();
@@ -30,11 +29,11 @@ namespace unbalanced_psi {
         server.to_file(SERVER_OFFLINE_OUTPUT);
     }
 
-    void Server::run_offline(u64 instances) {
+    void Server::run_offline(u64 instances, u64 hashtable_size, u64 bucket_size) {
 
         // if there is only one instance, don't bother with the thread pool
         if (instances == 1) {
-            return Server::run_offline();
+            return Server::run_offline(hashtable_size, bucket_size);
         }
 
         vector<Server> servers;
@@ -43,7 +42,9 @@ namespace unbalanced_psi {
                 Server(
                     SERVER_OFFLINE_INPUT_PREFIX
                     + std::to_string(i)
-                    + SERVER_OFFLINE_INPUT_SUFFIX
+                    + SERVER_OFFLINE_INPUT_SUFFIX,
+                    hashtable_size,
+                    bucket_size
                 )
             );
         }
@@ -90,10 +91,6 @@ namespace unbalanced_psi {
     }
 #else
     void Server::offline() {
-
-        // randomly sample secret key
-        PRNG prng(seed);
-        key.randomize(prng);
 
         // in multiple threads, build different sections of the hashtable
         std::future<Hashtable> futures[SERVER_OFFLINE_THREADS];

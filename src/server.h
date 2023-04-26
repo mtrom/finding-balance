@@ -5,7 +5,7 @@
 #include "utils.h"
 
 
-#define SERVER_SEED 406
+#define SERVER_SEED block(406)
 #define SERVER_OFFLINE_THREADS 1
 
 #define SERVER_OFFLINE_INPUT  "out/server.db"
@@ -30,9 +30,6 @@ namespace unbalanced_psi {
         // initializes the group element operations
         Curve curve;
 
-        // seed for randomness in selecting private key
-        block seed;
-
         // secret key
         Number key;
 
@@ -41,26 +38,34 @@ namespace unbalanced_psi {
 
         /**
          * run the server's offline portion of the protocol
+         *
+         * @params <hashtable_size> number of buckets in the hashtable
+         * @params <bucket_size> max number of elements in a hashtable bucket
          */
-        static void run_offline();
+        static void run_offline(u64 hashtable_size, u64 bucket_size);
 
         /**
          * run many server offlines for each cuckoo hash bucket
          *
          * @params <instances> number of cuckoo buckets being run
+         * @params <hashtable_size> number of buckets in the hashtable
+         * @params <bucket_size> max number of elements in a hashtable bucket
          */
-        static void run_offline(u64 instances);
+        static void run_offline(u64 instances, u64 hashtable_size, u64 bucket_size);
 
         /**
+         * setup server with input dataset and parameters
+         *
          * @params <filename> filename for dataset
-         * @params <encrypted> true if the data is already encrypted
-         * @params <seed> seed for randomness in selecting private key
+         * @params <hashtable_size> number of buckets in the hashtable
+         * @params <bucket_size> max number of elements in a hashtable bucket
          */
-        Server(
-            std::string db_file,
-            bool encrypted = false,
-            uint64_t s = uint64_t(SERVER_SEED)
-        );
+        Server(std::string db_file, u64 hashtable_size, u64 bucket_size);
+
+        /**
+         * setup a basic server with just the private key setup
+         */
+        Server();
 
         /**
          * @return number of elements in the dataset

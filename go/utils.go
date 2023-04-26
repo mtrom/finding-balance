@@ -47,6 +47,16 @@ func toHex(bytes []byte, size uint64) string {
 }
 
 /**
+ * modified version of Params.PrintParams() that's more consistantly formatted
+ */
+func PrintParams(params *Params) {
+    fmt.Printf(
+        "[ params ] db=%dx%d, hint=%dx%d, p=%d\n",
+        params.M, params.L, params.L, params.N, params.P,
+    )
+}
+
+/**
  * send data over a network connection, chunking if neccesary
  */
 func WriteOverNetwork(conn net.Conn, data []byte) {

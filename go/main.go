@@ -1,10 +1,11 @@
 package main
 
 import (
+    "flag"
     "io/ioutil"
+    "fmt"
     "log"
     "os"
-    "strconv"
 )
 
 const (
@@ -23,26 +24,57 @@ func RunBoth(dbFn, queriesFn, outputFn string) {
 func main() {
     log.SetOutput(ioutil.Discard)
 
-    if os.Args[1] == "client" {
-        serverLog, _ := strconv.ParseUint(os.Args[2], 10, 64)
+    if len(os.Args) < 2 {
+        fmt.Println("expected `client` or `server` subcommand")
+        os.Exit(1)
+    }
 
-        bucketSize := POINT_SIZE * serverLog
-        dbSize := uint64(1 << serverLog) * bucketSize
+    flag.Bool("client", false, "")
+    flag.Bool("server", false, "")
 
-        if len(os.Args) < 5 {
-            RunClient("out/queries.db", "out/answer.edb", dbSize, bucketSize)
-        } else {
-            RunClient(os.Args[3], os.Args[4], dbSize, bucketSize)
+    bucketN       := flag.Uint64("bucket-n", 0, "total number of buckets in server's hash table")
+    bucketSize    := flag.Uint64("bucket-size", 0, "size of each bucket in server's hash table")
+    bucketsPerCol := flag.Uint64("buckets-per-col", 0, "number of buckets in a col of the database")
+
+    if os.Args[1] == "-client" {
+        serverLog     := flag.Int64("server-log", -1, "log the size of the server's dataset")
+        input         := flag.String("input", "out/queries.db", "file with pir queries")
+        output        := flag.String("output", "out/answer.edb", "file to output pir answer")
+
+        flag.Parse()
+
+        if *serverLog == -1 { fmt.Println("expected --server-log argument"); os.Exit(1) }
+        if *bucketN == 0 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
+        if *bucketSize == 0 { fmt.Println("expected --bucket-size argument"); os.Exit(1) }
+        if *bucketsPerCol == 0 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
+
+        psiParams := PSIParams{
+            BucketN: *bucketN,
+            BucketSize: *bucketSize,
+            BucketsPerCol: *bucketsPerCol,
         }
-    } else if os.Args[1] == "server" {
-        queries, _ := strconv.ParseUint(os.Args[2], 10, 64)
-        if len(os.Args) < 4 {
-            RunServer("out/server.edb", 1 << queries)
-        } else {
-            RunServer(os.Args[3], 1 << queries)
+
+        RunClient(*input, *output, &psiParams)
+    } else if os.Args[1] == "-server" {
+        queries := flag.Int64("queries-log", -1, "number of pir queries")
+        input   := flag.String("input", "out/server.edb", "file with server database")
+
+        flag.Parse()
+
+        if *queries == -1 { fmt.Println("expected --queries-log argument"); os.Exit(1) }
+        if *bucketN == 0 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
+        if *bucketSize == 0 { fmt.Println("expected --bucket-size argument"); os.Exit(1) }
+        if *bucketsPerCol == 0 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
+
+        psiParams := PSIParams{
+            BucketN: *bucketN,
+            BucketSize: *bucketSize,
+            BucketsPerCol: *bucketsPerCol,
         }
+        RunServer(*input, 1 << *queries, &psiParams)
     } else {
-        RunBoth(os.Args[1], os.Args[2], os.Args[3])
+        fmt.Println("expected `client` or `server` subcommand")
+        os.Exit(1)
     }
 }
 

@@ -12,12 +12,21 @@ import (
  * run protocol as the server
  *
  * @param <input> filename for an encrypted database
+ * @param <queries> number of queries to answer
+ * @param <psiParams> params of the greater psi protocol
  */
-func RunServer(input string, queries uint64) {
+func RunServer(input string, queries uint64, psiParams *PSIParams) {
 
     // read in encrypted database from file
     values, bucketSize := ReadDatabase(input)
     dbSize := uint64(len(values))
+
+    if bucketSize != psiParams.BucketBytes() {
+        panic("bucket size inconsistent between file and params")
+    }
+    if dbSize != psiParams.DBBytes() {
+        panic("database size inconsistent between file and params")
+    }
 
     // connect to client
     client, err := net.Dial(SERVER_TYPE, SERVER_HOST)
@@ -32,7 +41,7 @@ func RunServer(input string, queries uint64) {
     subtimer := StartTimer("[ server ] build database", GREEN)
 
     // decide protocol parameters and set up database
-    protocol, params, ENTRY_BITS := SetupProtocol(dbSize, bucketSize)
+    protocol, params, ENTRY_BITS := SetupProtocol(psiParams)
     db := CreateDatabase(dbSize, ENTRY_BITS, params, values)
 
     subtimer.End()
@@ -84,7 +93,7 @@ func RunServer(input string, queries uint64) {
 		queryRows += db.Info.Squishing - (params.M % db.Info.Squishing)
 	}
 
-    answerTimer := CreateTimer("[ server ] pir answer", RED)
+    answerTimer := CreateTimer("[ server ] pir answer", GREEN)
     for i := uint64(0); i < queries; i++ {
         // read in query vector
         data := ReadOverNetwork(client, queryRows * ELEMENT_SIZE)

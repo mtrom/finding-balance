@@ -22,10 +22,9 @@ var bufPrgReader *BufPRGReader
  *
  * @param <input> filename for the indices to query
  * @param <output> filename to write the answer to
- * @param <dbSize> size of the server's db in bytes
- * @param <bucketSize> size of a bucket in bytes
+ * @param <psiParams> params of the greater psi protocol
  */
-func RunClient(input, output string, dbSize, bucketSize uint64) {
+func RunClient(input, output string, psiParams *PSIParams) {
 
     // read in query indices
     queries := ReadQueries(input)
@@ -45,10 +44,12 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
     subtimer := StartTimer("[ client ] pick params", YELLOW)
     // decide protocol parameters
-    protocol, params, entryBits := SetupProtocol(dbSize, bucketSize)
-    dbInfo := SetupDBInfo(dbSize, entryBits, params)
+    protocol, params, entryBits := SetupProtocol(psiParams)
+    dbInfo := SetupDBInfo(psiParams, entryBits, params)
+
 
     subtimer.End()
+    PrintParams(params)
     timer.Stop()
 
     // wait until the client is ready for offline
@@ -87,8 +88,8 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
     ////////////////////////// ONLINE /////////////////////////
 
-    queryTimer := CreateTimer("[ client ] pir query", BLUE)
-    recoverTimer := CreateTimer("[ client ] pir recover", BLUE)
+    queryTimer := CreateTimer("[ client ] pir query", YELLOW)
+    recoverTimer := CreateTimer("[ client ] pir recover", YELLOW)
     timer = StartTimer("[ client ] pir online", BLUE)
 
     comm := 0;
@@ -98,7 +99,7 @@ func RunClient(input, output string, dbSize, bucketSize uint64) {
 
         // translate the hash value into the column by dividing by the number
         // of buckets per column
-        translated := col / (params.L / bucketSize)
+        translated := col / psiParams.BucketsPerCol
 
         // generate the query vector and send to server
         queryTimer.Start()

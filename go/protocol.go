@@ -9,21 +9,49 @@ import (
 )
 
 /**
+ * parameters of the greater psi protocol
+ */
+type PSIParams struct {
+    BucketN       uint64 // number of buckets in server's hash table
+    BucketSize    uint64 // size of each bucket _in group elements_
+    BucketsPerCol uint64 // number of buckets in a col of the pir database
+}
+
+/**
+ * given psi params, size of each bucket in the database in bytes
+ */
+func (p* PSIParams) BucketBytes() uint64 {
+    return p.BucketSize * POINT_SIZE
+}
+
+/**
+ * given psi params, size of the encrypted database in bytes
+ */
+func (p* PSIParams) DBBytes() uint64 {
+    return p.BucketN * p.BucketSize * POINT_SIZE
+}
+
+/**
+ * given psi params, dimensions of the encrypted database in bytes
+ */
+// func (p* PSIParams) DBDims() (uint64, uint64) { }
+
+
+/**
  * get appropriate parameters based on database & lwe information
  *  modified from pir.SimplePIR.PickParams() to factor in bucket size
  *
- * @param <dbSize> number of entries in database
- * @param <bucketSize> number of entires per bucket
+ * @param <psiParams> params of the greater psi protocol
  * @param <entryBits> number of bits to represent an entry
  * @param <lweParam> security parameter for lwe
  * @param <lweMod> modulo for lwe and used to help find error distribution
  */
-func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params) {
+func GetParams(psiParams *PSIParams, entryBits, lweParam, lweMod uint64) (*Params) {
     var params *Params = nil
 
     // iteratively refine plaintext modulo to find tight values
     for ptMod := uint64(2); ; ptMod += 1 {
-        rows, cols := GetDatabaseDims(dbSize, bucketSize, entryBits, ptMod)
+        rows, cols := GetDatabaseDims(psiParams, entryBits, ptMod)
 
         candidate := Params{
             N:    lweParam,
@@ -38,8 +66,6 @@ func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params)
                 // we don't expect this to be possible
                 panic("could not find tight params")
             }
-            // TODO: debug log these
-            // params.PrintParams()
             return params
         }
 
@@ -54,11 +80,10 @@ func GetParams(dbSize, bucketSize, entryBits, lweParam, lweMod uint64) (*Params)
 /**
  * setup parameters for a SimplePIR protocol
  *
- * @param <dbSize> number of _bytes_ in the database
- * @params <bucketSize> number of bytes in each bucket
+ * @param <psiParams> params of the greater psi protocol
  * @returns protocol, parameters, and entry bits (so it can be used below)
  */
-func SetupProtocol(dbSize, bucketSize uint64) (SimplePIR, *Params, uint64) {
+func SetupProtocol(psiParams *PSIParams) (SimplePIR, *Params, uint64) {
 
     // LWE params
     const LOGQ = uint64(32)
@@ -67,9 +92,7 @@ func SetupProtocol(dbSize, bucketSize uint64) (SimplePIR, *Params, uint64) {
     // bits per database `element'
     const ENTRY_BITS = uint64(8)
 
-    params := GetParams(
-        dbSize, bucketSize, ENTRY_BITS, SEC_PARAM, LOGQ,
-    )
+    params := GetParams(psiParams, ENTRY_BITS, SEC_PARAM, LOGQ)
     protocol := SimplePIR{}
 
     return protocol, params, ENTRY_BITS
@@ -85,6 +108,9 @@ func SetupProtocol(dbSize, bucketSize uint64) (SimplePIR, *Params, uint64) {
  */
 func SetupProtocolAndDB(dbFn string) (SimplePIR, *Params, *Database, uint64) {
 
+    return SimplePIR{}, nil, nil, 0
+
+    /*
     // raw binary database
     values, bucketSize := ReadDatabase(dbFn)
     dbSize := uint64(len(values))
@@ -93,6 +119,7 @@ func SetupProtocolAndDB(dbFn string) (SimplePIR, *Params, *Database, uint64) {
     db := CreateDatabase(dbSize, ENTRY_BITS, params, values)
 
     return protocol, params, db, bucketSize
+    */
 }
 
 /**

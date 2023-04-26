@@ -21,7 +21,11 @@ int main(int argc, char *argv[]) {
             parser.get<u64>("-server-log"), cuckoo_n
         );
     } else if (parser.isSet("server") || parser.isSet("-server")) {
-        Server::run_offline(cuckoo_n);
+        Server::run_offline(
+            cuckoo_n,
+            parser.get<u64>("-bucket-n"),
+            parser.get<u64>("-bucket-size")
+        );
     } else {
         std::cerr << "need to specify either --server or --client" << std::endl;
         return 1;
