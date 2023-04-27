@@ -9,16 +9,14 @@
 
 namespace unbalanced_psi {
 
-    Hashtable::Hashtable() : size(0), max_bucket(0) {
-    }
 
     Hashtable::Hashtable(u64 buckets, u64 max) : size(0), max_bucket(max) {
         resize(buckets, max_bucket);
-    };
+    }
 
     Hashtable::Hashtable(std::string filename) {
         from_file(filename);
-    };
+    }
 
     void Hashtable::resize(u64 buckets, u64 max) {
         max_bucket = max;
@@ -33,6 +31,17 @@ namespace unbalanced_psi {
         return output % table_size;
     }
 
+    u64 Hashtable::hash(Point encrypted, u64 table_size) {
+        vector<u8> bytes(sizeof(u64));
+        hash_group_element(encrypted, sizeof(u64), bytes.data());
+        u64 output = 0;
+        for (u8 byte : bytes) {
+            output = output << 8;
+            output += byte;
+        }
+        return output % table_size;
+    }
+
     void Hashtable::insert(INPUT_TYPE element, Point encrypted) {
         u64 index = hash(element, table.size());
         table[index].push_back(encrypted);
@@ -41,6 +50,12 @@ namespace unbalanced_psi {
         if (table[index].size() > max_bucket) {
             throw std::overflow_error("more than max_bucket collisions");
         }
+    }
+
+    void Hashtable::insert(Point encrypted) {
+        u64 index = hash(encrypted, table.size());
+        table[index].push_back(encrypted);
+        size++;
     }
 
     void Hashtable::pad(u64 min, u64 max) {
@@ -153,19 +168,6 @@ namespace unbalanced_psi {
 
     u64 Hashtable::buckets() {
         return table.size();
-    }
-
-    void Hashtable::concat(Hashtable other) {
-
-        if (other.buckets() != table.size()) {
-            throw std::runtime_error("trying to concat two different size hashtables");
-        }
-
-        size += other.size;
-
-        for (auto i = 0; i < table.size(); i++) {
-            table[i].insert(table[i].end(), other.table[i].begin(), other.table[i].end());
-        }
     }
 
     void Hashtable::log() {

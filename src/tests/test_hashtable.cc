@@ -94,6 +94,61 @@ namespace unbalanced_psi {
         }
     }
 
+    void test_hashtable_insert_one_point() {
+        INPUT_TYPE element = 42;
+        u64 TABLE_SIZE = 1024;
+        u64 MAX_BUCKET = 10;
+
+        Curve curve;
+        Point encrypted = hash_to_group_element(element);
+
+        vector<Point> expected{ encrypted };
+        u64 hashvalue = Hashtable::hash(encrypted, TABLE_SIZE);
+
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
+        hashtable.insert(encrypted);
+
+        if (hashtable.table[hashvalue] != expected) {
+            throw UnitTestFail("element not found in expected bucket");
+        }
+    }
+
+    void test_hashtable_insert_many_points() {
+        u64 TABLE_SIZE = 16;
+        u64 MAX_BUCKET = 10;
+        u64 TARGET_HASH = 5;
+        u64 TARGET_ELEMENTS = 2;
+
+        Curve curve;
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
+
+        vector<Point> expected;
+
+        INPUT_TYPE element = 0;
+        while (expected.size() < TARGET_ELEMENTS) {
+            Point encrypted = hash_to_group_element(element);
+
+            hashtable.insert(encrypted);
+
+            if (Hashtable::hash(encrypted, TABLE_SIZE) == TARGET_HASH) {
+                expected.push_back(encrypted);
+            }
+            element++;
+        }
+
+        if (hashtable.table[TARGET_HASH] != expected) {
+            char errmsg[85];
+            std::snprintf(
+                errmsg, sizeof(errmsg),
+                "correct elements not found in bucket\n"
+                "expected.size() = %u vs. actual.size() = %u",
+                (unsigned int) expected.size(),
+                (unsigned int) hashtable.table[TARGET_HASH].size()
+            );
+            throw UnitTestFail(errmsg);
+        }
+    }
+
     void test_hashtable_pad_empty() {
         u64 TABLE_SIZE = 8;
         u64 MAX_BUCKET = 3;
