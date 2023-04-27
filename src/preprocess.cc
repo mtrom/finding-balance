@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
 
         Cuckoo cuckoo(hashes, buckets);
 
-        vector<INPUT_TYPE> dataset = read_dataset(input);
+        vector<INPUT_TYPE> dataset = read_dataset<INPUT_TYPE>(input);
 
         Timer timer("[ client ] cuckoo hash", BLUE);
         for (auto element : dataset) {
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
         Cuckoo cuckoo(hashes, buckets);
 
-        vector<INPUT_TYPE> dataset = read_dataset(input);
+        vector<INPUT_TYPE> dataset = read_dataset<INPUT_TYPE>(input);
 
         Timer timer("[ server ] cuckoo hash", RED);
         for (auto element : dataset) {

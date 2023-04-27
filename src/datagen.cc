@@ -14,6 +14,6 @@ int main(int argc, char *argv[]) {
         1 << parser.getOr<int>("-client-log", 0),
         parser.getOr<int>("-overlap", 1)
     );
-    write_dataset(server, parser.getOr<std::string>("-server-fn", "out/server.db"));
-    write_dataset(client, parser.getOr<std::string>("-client-fn", "out/client.db"));
+    write_dataset<INPUT_TYPE>(server, parser.getOr<std::string>("-server-fn", "out/server.db"));
+    write_dataset<INPUT_TYPE>(client, parser.getOr<std::string>("-client-fn", "out/client.db"));
 }

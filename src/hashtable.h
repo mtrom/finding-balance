@@ -16,8 +16,6 @@ namespace unbalanced_psi {
 
         void resize(u64 buckets, u64 max_bucket);
 
-        static std::tuple<u64, u64> get_params(u64 server_size);
-
         static u64 hash(INPUT_TYPE element, u64 table_size);
 
         void insert(INPUT_TYPE element, Point encrypted);
@@ -31,6 +29,8 @@ namespace unbalanced_psi {
         void pad(u64 min_bucket, u64 max_bucket);
 
         void shuffle();
+
+        vector<u8> apply_hash(int hash_length);
 
         u64 buckets();
 

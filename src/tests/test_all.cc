@@ -28,6 +28,7 @@ int main() {
         th.add("test_hashtable_from_file       ", test_hashtable_from_file);
         th.add("test_hashtable_to_from_file    ", test_hashtable_from_file);
         th.add("test_hashtable_shuffle         ", test_hashtable_shuffle);
+        th.add("test_hashtable_apply_hash      ", test_hashtable_apply_hash);
         th.add("test_cuckoo_hash_repeat        ", test_cuckoo_hash_repeat);
         th.add("test_cuckoo_hash_diff          ", test_cuckoo_hash_diff);
         th.add("test_cuckoo_insert_one         ", test_cuckoo_insert_one);

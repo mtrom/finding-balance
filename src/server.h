@@ -24,8 +24,8 @@ namespace unbalanced_psi {
         // server's dataset
         vector<INPUT_TYPE> dataset;
 
-        // hashtable of encrypted data
-        Hashtable hashtable;
+        // dataset of g(h(x)^a)
+        vector<u8> pir_input;
 
         // initializes the group element operations
         Curve curve;
@@ -33,6 +33,11 @@ namespace unbalanced_psi {
         // secret key
         Number key;
 
+        // number of buckets in the hashtable
+        u64 hashtable_size;
+
+        // max number of elements in the hashtable
+        u64 bucket_size;
 
         public:
 
@@ -48,8 +53,8 @@ namespace unbalanced_psi {
          * run many server offlines for each cuckoo hash bucket
          *
          * @params <instances> number of cuckoo buckets being run
-         * @params <hashtable_size> number of buckets in the hashtable
-         * @params <bucket_size> max number of elements in a hashtable bucket
+         * @params <hashtable_size> number of buckets in the psi hashtable
+         * @params <bucket_size> max number of elements in a psi hashtable bucket
          */
         static void run_offline(u64 instances, u64 hashtable_size, u64 bucket_size);
 
@@ -68,14 +73,11 @@ namespace unbalanced_psi {
         Server();
 
         /**
-         * @return number of elements in the dataset
-         */
-        int size();
-
-        /**
          * encrypt dataset under secret key and prepare hashtable
+         *
+         * @return bytes to be used for input for SimplePIR
          */
-        void offline();
+        vector<u8> offline();
 
 #if SERVER_OFFLINE_THREADS != 1
         /**
@@ -97,10 +99,9 @@ namespace unbalanced_psi {
         void online(Channel channel);
 
         /**
-         * write the encrypted hashtable to a file
-         *
-         * @params <filename> filename to write encrypted dataset to
+         * @return number of elements in the dataset
          */
-        void to_file(std::string filename);
+        int size();
+
     };
 }

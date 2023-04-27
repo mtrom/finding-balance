@@ -26,23 +26,6 @@ namespace unbalanced_psi {
         table.resize(buckets, vector<Point>());
     }
 
-
-    std::tuple<u64, u64> Hashtable::get_params(u64 server_size) {
-        if (server_size == 1 << 20) {
-            return std::make_tuple(1 << 18, 28);
-        } else if (server_size == 1 << 22) {
-            return std::make_tuple(1 << 20, 28);
-        } else if (server_size == 1 << 24) {
-            return std::make_tuple(1 << 22, 28);
-        } else if (server_size == 1 << 26) {
-            return std::make_tuple(1 << 23, 40);
-        } else if (server_size == 1 << 28) {
-            return std::make_tuple(1 << 23, 96);
-        } else {
-            return std::make_tuple(server_size, u64(log2(server_size)));
-        }
-    }
-
     u64 Hashtable::hash(INPUT_TYPE element, u64 table_size) {
         block seed(element);
         PRNG prng(seed);
@@ -86,6 +69,20 @@ namespace unbalanced_psi {
         for (auto i = 0; i < table.size(); i++) {
             std::shuffle(table[i].begin(), table[i].end(), prng);
         }
+    }
+
+    vector<u8> Hashtable::apply_hash(int hash_length) {
+        vector<u8> output(size * hash_length);
+        u8 *ptr = output.data();
+
+        for (auto bucket : table) {
+            for (Point element : bucket) {
+                hash_group_element(element, hash_length, ptr);
+                ptr += hash_length;
+            }
+        }
+
+        return output;
     }
 
     void Hashtable::to_file(std::string filename) {

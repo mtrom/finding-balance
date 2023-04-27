@@ -1,18 +1,20 @@
-#include <vector>
+#include <algorithm>
 #include <fstream>
+#include <iterator>
 #include <ostream>
+#include <vector>
 
 #include "client.h"
 
 namespace unbalanced_psi {
 
     Client::Client(std::string filename)
-        : dataset(read_dataset(filename)),
+        : dataset(read_dataset<INPUT_TYPE>(filename)),
           encrypted(dataset.size()),
           queries(dataset.size()) { }
 
     Client::Client(std::string db_file, std::string answer_file) :
-        dataset(read_dataset(db_file)),
+        dataset(read_dataset<INPUT_TYPE>(db_file)),
         encrypted(dataset.size()),
         queries(dataset.size())
     {
@@ -113,19 +115,20 @@ namespace unbalanced_psi {
         vector<u8> response(request.size());
         channel.recv(response);
 
+        vector<vector<u8>> hashed(encrypted.size(), vector<u8>(HASH_3_SIZE));
+
         for (auto i = 0; i < encrypted.size(); i++) {
-            encrypted[i].fromBytes(response.data() + (i * Point::size));
+            encrypted[i].fromBytes(response.data() + (i * Point::size)); // h(y)^ab
+            encrypted[i] = encrypted[i] * key.inverse();                 // h(y)^a
+            hash_group_element(encrypted[i], HASH_3_SIZE, hashed[i].data());
         }
 
         // look through pir results and determine overlap
         int found = 0;
-        for (u8 *ptr = answer.data(); ptr < &answer.back(); ptr += Point::size) {
-            Point result;
-            result.fromBytes(ptr); // h(x)^a
-            result = result * key; // h(x)^ab
 
-            for (Point element : encrypted) {
-                if (element == result) {
+        for (vector<u8> hash : hashed) {
+            for (u8* ptr = answer.data(); ptr < &answer.back(); ptr += HASH_3_SIZE) {
+                if (std::equal(ptr, ptr + HASH_3_SIZE, hash.begin())) {
                     found++;
                 }
             }

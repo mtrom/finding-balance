@@ -2,25 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
 #include <ostream>
 #include <random>
 #include <string>
-
-#define HASH_SIZE 32
 
 using namespace std::chrono;
 
 namespace unbalanced_psi {
 
-    /**
-     * generate a mock dataset
-     *
-     * @param <size> desired number of elements in the dataset
-     * @return random vector of numbers
-     */
     vector<INPUT_TYPE> generate_dataset(int size) {
         // TODO: how to generate a random seed? chicken and egg...
         block seed(std::rand());
@@ -31,14 +20,6 @@ namespace unbalanced_psi {
         return dataset;
     }
 
-    /**
-     * generate two mock datasets for the server and client
-     *
-     * @param <server_size> number of elements in the server's dataset
-     * @param <client_size> number of elements in the client's dataset
-     * @param <overlap>     _minimum_ number of elements shared between the two datasets
-     * @return random vector of numbers
-     */
     tuple<vector<INPUT_TYPE>,vector<INPUT_TYPE>> generate_datasets(int server_size, int client_size, int overlap) {
         vector<INPUT_TYPE> both   = generate_dataset(overlap);
         vector<INPUT_TYPE> server = generate_dataset(server_size - overlap);
@@ -51,73 +32,36 @@ namespace unbalanced_psi {
         return datasets;
     }
 
-    /**
-     * write dataset to binary file
-     *
-     * @param <dataset> dataset to write to file
-     * @param <filename> filename to write to
-     */
-    void write_dataset(vector<INPUT_TYPE> dataset, std::string filename) {
-        std::ofstream file(filename, std::ios::out | std::ios::binary);
-        if (!file) {
-            throw std::runtime_error("cannot open " + filename);
-        }
-        file.write((const char*) dataset.data(), dataset.size() * sizeof(INPUT_TYPE));
-    }
-
-    /**
-     * write dataset to binary file
-     *
-     * @param <dataset> dataset to write to file
-     * @param <filename> filename to write to
-     */
-    vector<INPUT_TYPE> read_dataset(std::string filename) {
-        std::ifstream file(filename, std::ios::in | std::ios::binary);
-        if (!file) {
-            throw std::runtime_error("cannot open " + filename);
-        }
-
-        file.seekg (0, file.end);
-        int bytes = file.tellg();
-        file.seekg (0, file.beg);
-
-        vector<INPUT_TYPE> dataset(bytes / sizeof(INPUT_TYPE));
-        file.read((char*) dataset.data(), bytes);
-        return dataset;
-    }
-
-    /**
-     * hash a set element to a group element for ddh
-     *
-     * @param <input> set element to hash
-     * @return random group element
-     */
     Point hash_to_group_element(INPUT_TYPE input) {
-        RandomOracle oracle(HASH_SIZE);
+        RandomOracle oracle(HASH_1_SIZE);
 
         oracle.Reset();
         oracle.Update(input);
 
-        vector<u8> hashed(HASH_SIZE);
+        vector<u8> hashed(HASH_1_SIZE);
         oracle.Final(hashed.data());
 
         Point point;
-        point.fromHash(hashed.data(), HASH_SIZE);
+        point.fromHash(hashed.data(), HASH_1_SIZE);
         return point;
     }
 
-    /**
-     * convert a Point into a hex string for debugging
-     */
+    void hash_group_element(const Point& element, int length, u8* dest) {
+        RandomOracle oracle(length);
+        vector<u8> bytes(Point::size);
+        element.toBytes(bytes.data());
+
+        oracle.Reset();
+        oracle.Update(bytes.data(), bytes.size());
+        oracle.Final(dest);
+    }
+
     std::string to_hex(Point point) {
         vector<u8> bytes(Point::size);
         point.toBytes(bytes.data());
         return to_hex(bytes.data(), bytes.size());
     }
 
-    /**
-     * convert a byte vector into a hex string for debugging
-     */
     std::string to_hex(u8 *bytes, u64 size) {
         static const char* digits = "0123456789ABCDEF";
 

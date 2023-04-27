@@ -18,12 +18,9 @@ import (
 func RunServer(input string, queries uint64, psiParams *PSIParams) {
 
     // read in encrypted database from file
-    values, bucketSize := ReadDatabase(input)
+    values := ReadDatabase(input)
     dbSize := uint64(len(values))
 
-    if bucketSize != psiParams.BucketBytes() {
-        panic("bucket size inconsistent between file and params")
-    }
     if dbSize != psiParams.DBBytes() {
         panic("database size inconsistent between file and params")
     }

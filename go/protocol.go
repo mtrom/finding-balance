@@ -21,14 +21,14 @@ type PSIParams struct {
  * given psi params, size of each bucket in the database in bytes
  */
 func (p* PSIParams) BucketBytes() uint64 {
-    return p.BucketSize * POINT_SIZE
+    return p.BucketSize * ENTRY_SIZE
 }
 
 /**
  * given psi params, size of the encrypted database in bytes
  */
 func (p* PSIParams) DBBytes() uint64 {
-    return p.BucketN * p.BucketSize * POINT_SIZE
+    return p.BucketN * p.BucketSize * ENTRY_SIZE
 }
 
 /**

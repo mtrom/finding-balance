@@ -14,8 +14,8 @@ import (
     . "github.com/ahenzinger/simplepir/pir"
 )
 
-// size of a group element in bytes
-const POINT_SIZE uint64 = 33
+// size of pir input hash in bytes
+const ENTRY_SIZE uint64 = 10
 
 // size of a matrix element in bytes
 const ELEMENT_SIZE = 4
@@ -38,7 +38,7 @@ const RESET  = "\033[0m"
 func toHex(bytes []byte, size uint64) string {
     const digits = string("0123456789ABCDEF")
 
-    output := make([]byte, size * POINT_SIZE * 2)
+    output := make([]byte, size * ENTRY_SIZE * 2)
     for i := range bytes {
         output[2 * i] = digits[bytes[i] & 0x0F]
         output[(2 * i) + 1] = digits[(bytes[i] >> 4) & 0x0F]
@@ -123,15 +123,11 @@ func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
 /**
  * read database from file
  */
-func ReadDatabase(filename string) ([]uint64, uint64) {
+func ReadDatabase(filename string) ([]uint64) {
     file, err := os.ReadFile(filename)
     if err != nil { panic(err) }
 
     reader := bytes.NewReader(file)
-
-    var buckets, bucketSize uint64
-    binary.Read(reader, binary.LittleEndian, &buckets)
-    binary.Read(reader, binary.LittleEndian, &bucketSize)
 
     var values []uint64
     for {
@@ -145,7 +141,7 @@ func ReadDatabase(filename string) ([]uint64, uint64) {
         values = append(values, uint64(value))
     }
 
-    return values, bucketSize
+    return values
 }
 
 func WriteDatabase(filename string, values []uint64) {

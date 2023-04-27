@@ -56,14 +56,14 @@ namespace unbalanced_psi {
 
     void test_read_dataset() {
         vector<INPUT_TYPE> EXPECTED{1234, 123456, 12345678, 1234567890};
-        auto actual = read_dataset("src/tests/test.db");
+        auto actual = read_dataset<INPUT_TYPE>("src/tests/test.db");
         compare_vectors(EXPECTED, actual, "dataset from test.db not correct");
     }
 
     void test_write_read_dataset() {
         auto original = generate_dataset(100);
         write_dataset(original, "/tmp/dataset.db");
-        auto readin = read_dataset("/tmp/dataset.db");
+        auto readin = read_dataset<INPUT_TYPE>("/tmp/dataset.db");
 
         compare_vectors(original, readin, "dataset changed when written to file");
     }

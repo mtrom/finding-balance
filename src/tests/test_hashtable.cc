@@ -231,4 +231,18 @@ namespace unbalanced_psi {
             throw UnitTestFail("inserted element disappeared after shuffling");
         }
     }
+
+    void test_hashtable_apply_hash() {
+        u64 TABLE_SIZE = 3;
+        u64 MAX_BUCKET = 10;
+        u64 HASH_SIZE  = 10;
+
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
+        hashtable.pad();
+        vector<u8> hashed = hashtable.apply_hash(HASH_SIZE);
+
+        if (hashed.size() != TABLE_SIZE * MAX_BUCKET * HASH_SIZE) {
+            throw UnitTestFail("didn't get expected size for hashed hashtable");
+        }
+    }
 }

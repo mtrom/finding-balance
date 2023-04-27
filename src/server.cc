@@ -6,8 +6,8 @@
 
 namespace unbalanced_psi {
 
-    Server::Server(std::string filename, u64 hashtable_size, u64 bucket_size)
-        : dataset(read_dataset(filename)), hashtable(hashtable_size, bucket_size) {
+    Server::Server(std::string filename, u64 hsize, u64 bsize)
+        : dataset(read_dataset<INPUT_TYPE>(filename)), hashtable_size(hsize), bucket_size(bsize) {
         // randomly sample secret key
         PRNG prng(SERVER_SEED);
         key.randomize(prng);
@@ -23,10 +23,10 @@ namespace unbalanced_psi {
         Server server(SERVER_OFFLINE_INPUT, hashtable_size, bucket_size);
 
         Timer timer("[ server ] ddh offline", RED);
-        server.offline();
+        vector<u8> output = server.offline();
         timer.stop();
 
-        server.to_file(SERVER_OFFLINE_OUTPUT);
+        write_dataset<u8>(output, SERVER_OFFLINE_OUTPUT);
     }
 
     void Server::run_offline(u64 instances, u64 hashtable_size, u64 bucket_size) {
@@ -50,32 +50,34 @@ namespace unbalanced_psi {
         }
 
         ctpl::thread_pool threads(MAX_THREADS);
-        vector<std::future<void>> futures(instances);
+        vector<std::future<vector<u8>>> futures(instances);
 
         Timer timer("[ server ] ddh offline", RED);
         for (auto i = 0; i < instances; i++) {
             futures[i] = threads.push([&servers, i](int) {
                 Curve c; // inits relic on the thread
-                servers[i].offline();
+                return servers[i].offline();
             });
         }
+
+        vector<vector<u8>> outputs(instances);
         for (auto i = 0; i < instances; i++) {
-            futures[i].get();
+            outputs[i] = futures[i].get();
         }
         timer.stop();
 
         for (auto i = 0; i < instances; i++) {
-            servers[i].to_file(
-                SERVER_OFFLINE_OUTPUT_PREFIX
-                + std::to_string(i)
-                + SERVER_OFFLINE_OUTPUT_SUFFIX
+            write_dataset<u8>(
+                outputs[i],
+                SERVER_OFFLINE_OUTPUT_PREFIX + std::to_string(i) + SERVER_OFFLINE_OUTPUT_SUFFIX
             );
         }
     }
 
 
 #if SERVER_OFFLINE_THREADS == 1
-    void Server::offline() {
+    vector<u8> Server::offline() {
+        Hashtable hashtable(hashtable_size, bucket_size);
 
         // hash elements in dataset
         for (auto i = 0; i < dataset.size(); i++) {
@@ -88,12 +90,13 @@ namespace unbalanced_psi {
         // add any required padding and shuffle
         hashtable.pad();
         hashtable.shuffle();
+        return hashtable.apply_hash(HASH_3_SIZE);
     }
 #else
-    void Server::offline() {
+    vector<u8> Server::offline() {
 
         // in multiple threads, build different sections of the hashtable
-        std::future<Hashtable> futures[SERVER_OFFLINE_THREADS];
+        std::future<vector<u8>> futures[SERVER_OFFLINE_THREADS];
         for (auto i = 0; i < SERVER_OFFLINE_THREADS; i++) {
             futures[i] = std::async(
                 &Server::partial_offline,
@@ -103,14 +106,17 @@ namespace unbalanced_psi {
             );
         }
 
-        // combine partial hash tables
+        // combine partial results
+        vector<u8> output;
         for (auto i = 0; i < SERVER_OFFLINE_THREADS; i++) {
-            Hashtable other = futures[i].get();
-            hashtable.concat(other);
+            vector<u8> partial = futures[i].get();
+            output.insert(output.end(), partial.begin(), partial.end());
         }
+
+        return output;
     }
 
-    Hashtable Server::partial_offline(u64 min_bucket, u64 max_bucket) {
+    vector<u8> Server::partial_offline(u64 min_bucket, u64 max_bucket) {
 
         // each thread needs to initalize a Curve for relic's sake
         Curve c;
@@ -132,7 +138,7 @@ namespace unbalanced_psi {
         ht.pad(min_bucket, max_bucket);
         ht.shuffle();
 
-        return ht;
+        return ht.apply_hash(HASH_3_SIZE);
     }
 #endif
 
@@ -153,10 +159,6 @@ namespace unbalanced_psi {
         }
 
         channel.send(response);
-    }
-
-    void Server::to_file(std::string filename) {
-        hashtable.to_file(filename);
     }
 
     int Server::size() {
