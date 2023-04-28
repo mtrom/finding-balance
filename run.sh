@@ -6,12 +6,10 @@ BUCKETS_PER_COL=2
 
 set -e
 ./bin/datagen --server-log $1 --client-log $2 --overlap $3
-./bin/offline --client --server-log $1 --cuckoo-n 1
-./bin/offline --server --cuckoo-n 1 --bucket-n $BUCKET_N --bucket-size $BUCKET_SIZE
-./bin/pir -client --server-log $1 --bucket-n $BUCKET_N --bucket-size $BUCKET_SIZE --buckets-per-col $BUCKETS_PER_COL &
-./bin/pir -server --queries-log $2 --bucket-n $BUCKET_N --bucket-size $BUCKET_SIZE --buckets-per-col $BUCKETS_PER_COL &
+./bin/oprf --client --cuckoo-n 1 --bucket-n $BUCKET_N &
+./bin/oprf --server --cuckoo-n 1 --bucket-n $BUCKET_N --bucket-size $BUCKET_SIZE &
 wait
-./bin/online --server &
-./bin/online --client --expected $3 &
+./bin/pir  --client --bucket-n $BUCKET_N --bucket-size $BUCKET_SIZE --buckets-per-col $BUCKETS_PER_COL --expected $3 &
+./bin/pir  --server --bucket-n $BUCKET_N --bucket-size $BUCKET_SIZE --buckets-per-col $BUCKETS_PER_COL --queries-log $2 &
 wait
 set +e

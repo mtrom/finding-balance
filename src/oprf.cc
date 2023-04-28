@@ -18,49 +18,44 @@ int main(int argc, char *argv[]) {
     IOService ios(IOS_THREADS);
     ios.mPrint = false;
 
-    if (parser.isSet("client") || parser.isSet("-client")) {
-        auto dataset  = parser.getOr<std::string>("-db", "out/client.db");
-        auto answer   = parser.getOr<std::string>("-ans", "out/answer.edb");
-        auto expected = parser.get<u64>("-expected");
+    auto cuckoo_n = parser.get<u64>("-cuckoo-n");
 
-        Client client(dataset, answer);
+    if (parser.isSet("client") || parser.isSet("-client")) {
+        Client client(CLIENT_INPUT, parser.get<u64>("-bucket-n"));
 
         // set up network connections
         Session session(ios, "127.0.0.1:1212", SessionMode::Client, "pirpsi");
         Channel channel = session.addChannel();
         channel.waitForConnection();
 
-        Timer offline("[ client ] ddh offline (2)", BLUE);
         client.offline();
-        offline.stop();
 
         vector<u8> ready;
         channel.recv(ready);
 
         Timer online("[ client ] ddh online", BLUE);
-        auto [ actual, comm ] = client.online(channel);
+        auto [ hashed, queries, comm ] = client.online(channel);
         online.stop();
 
         std::cout << "[  both  ] online comm (bytes)\t: " << comm << std::endl;
 
-        if (actual == expected) {
-            std::cout << GREEN << "\n[ client ] SUCCESS" << RESET << std::endl;
-        } else {
-            std::cout << RED << "[ client ] FAILURE: expected ";
-            std::cout << expected << " but found " << actual;
-            std::cout << RESET << std::endl;
-        }
-
-        return 0;
+        write_dataset(hashed, CLIENT_ONLINE_OUTPUT);
+        write_dataset(queries, CLIENT_QUERY_OUTPUT);
     } else if (parser.isSet("server") || parser.isSet("-server")) {
-        auto input = parser.getOr<std::string>("-db", "out/server.edb");
-
-        Server server;
+        Server server(
+            SERVER_OFFLINE_INPUT,
+            parser.get<u64>("-bucket-n"),
+            parser.get<u64>("-bucket-size")
+        );
 
         // set up network connections
         Session session(ios, "127.0.0.1:1212", SessionMode::Server, "pirpsi");
         Channel channel = session.addChannel();
         channel.waitForConnection();
+
+        Timer timer("[ server ] ddh offline", RED);
+        vector<u8> database = server.offline();
+        timer.stop();
 
         vector<u8> ready { 1 };
         channel.send(ready);
@@ -69,9 +64,10 @@ int main(int argc, char *argv[]) {
         server.online(channel);
         online.stop();
 
-        return 0;
+        write_dataset<u8>(database, SERVER_OFFLINE_OUTPUT);
     } else {
         std::cerr << "need to specify either --server or --client" << std::endl;
         return 1;
     }
+    return 0;
 }

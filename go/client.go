@@ -2,11 +2,19 @@ package main
 
 import (
 	"crypto/aes"
+    "bytes"
     "fmt"
-    "time"
     "net"
+    // "reflect"
+    "time"
+    // "unsafe"
 
     . "github.com/ahenzinger/simplepir/pir"
+)
+
+const (
+    CLIENT_OPRF_RESULT = "out/client.edb"
+    CLIENT_QUERIES     = "out/queries.db"
 )
 
 /**
@@ -20,14 +28,15 @@ var bufPrgReader *BufPRGReader
 /**
  * run protocol as the server
  *
- * @param <input> filename for the indices to query
- * @param <output> filename to write the answer to
  * @param <psiParams> params of the greater psi protocol
  */
-func RunClient(input, output string, psiParams *PSIParams) {
+func RunClient(psiParams *PSIParams, expected int) {
 
     // read in query indices
-    queries := ReadQueries(input)
+    queries := ReadQueries(CLIENT_QUERIES)
+
+    // read in result of oprf
+    oprf := ReadDatabase[byte](CLIENT_OPRF_RESULT)
 
     // connect to server
     connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)
@@ -80,7 +89,7 @@ func RunClient(input, output string, psiParams *PSIParams) {
 
     ///////////////////////////////////////////////////////////
 
-    fmt.Printf("[  both  ] offline comm (MB)\t: %.4f\n", float64(len(offline)) / 1000000)
+    fmt.Printf("[  both  ] offline comm (MB)\t: %.3f\n", float64(len(offline)) / 1000000)
 
     // let the server know we're ready for online
     ready = []byte{1}
@@ -93,7 +102,7 @@ func RunClient(input, output string, psiParams *PSIParams) {
     timer = StartTimer("[ client ] pir online", BLUE)
 
     comm := 0;
-    var results []uint64
+    var results []byte
     queried := map[uint64]struct{}{}
     for _, col := range queries {
 
@@ -138,13 +147,30 @@ func RunClient(input, output string, psiParams *PSIParams) {
         results = append(results, column...)
     }
 
+    // find intersection between OPRF and PIR results
+    subtimer = StartTimer("[ client ] find result", YELLOW)
+    found := 0
+    for i := 0; i < len(results); i += ENTRY_SIZE {
+        for j := 0; j < len(oprf); j += ENTRY_SIZE {
+            if bytes.Equal(results[i:i+ENTRY_SIZE], oprf[j:j+ENTRY_SIZE]) {
+                found++;
+            }
+        }
+    }
+    subtimer.Stop()
     timer.End()
     queryTimer.Print()
     recoverTimer.Print()
+    subtimer.Print()
 
     ///////////////////////////////////////////////////////////
 
-    fmt.Printf("[  both  ] online comm (MB)\t: %.4f\n", float64(comm) / 1000000)
+    fmt.Printf("[  both  ] online comm (MB)\t: %.3f\n", float64(comm) / 1000000)
 
-    WriteDatabase(output, results)
+    if found == expected {
+        fmt.Printf("%s>>>>>>>>>>>>>>> SUCCESS <<<<<<<<<<<<<<<%s\n", GREEN, RESET)
+    } else {
+        fmt.Printf("%s>>>>>>>>> FAILURE [%d vs %d] >>>>>>>>>%s\n", RED, found, expected, RESET)
+    }
+
 }

@@ -28,24 +28,14 @@ add_executable(cuckoo
 target_link_libraries(cuckoo oc::cryptoTools)
 
 # run the offline portions of the protocol
-add_executable(offline
-    ${PROJECT_SOURCE_DIR}/src/offline.cc
+add_executable(oprf
+    ${PROJECT_SOURCE_DIR}/src/oprf.cc
     ${PROJECT_SOURCE_DIR}/src/client.cc
-    ${PROJECT_SOURCE_DIR}/src/hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/server.cc
+    ${PROJECT_SOURCE_DIR}/src/hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/utils.cc
 )
-target_link_libraries(offline oc::cryptoTools)
-
-# run the online portions of the protocol
-add_executable(online
-    ${PROJECT_SOURCE_DIR}/src/online.cc
-    ${PROJECT_SOURCE_DIR}/src/client.cc
-    ${PROJECT_SOURCE_DIR}/src/hashtable.cc
-    ${PROJECT_SOURCE_DIR}/src/server.cc
-    ${PROJECT_SOURCE_DIR}/src/utils.cc
-)
-target_link_libraries(online oc::cryptoTools)
+target_link_libraries(oprf oc::cryptoTools)
 
 # test c++ library
 add_executable(tests

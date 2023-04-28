@@ -13,12 +13,6 @@ namespace unbalanced_psi {
         key.randomize(prng);
     }
 
-    Server::Server() {
-        // randomly sample secret key
-        PRNG prng(SERVER_SEED);
-        key.randomize(prng);
-    }
-
     void Server::run_offline(u64 hashtable_size, u64 bucket_size) {
         Server server(SERVER_OFFLINE_INPUT, hashtable_size, bucket_size);
 

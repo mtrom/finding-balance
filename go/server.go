@@ -8,17 +8,18 @@ import (
     . "github.com/ahenzinger/simplepir/pir"
 )
 
+const SERVER_DATABASE = "out/server.edb"
+
 /**
  * run protocol as the server
  *
- * @param <input> filename for an encrypted database
  * @param <queries> number of queries to answer
  * @param <psiParams> params of the greater psi protocol
  */
-func RunServer(input string, queries uint64, psiParams *PSIParams) {
+func RunServer(queries uint64, psiParams *PSIParams) {
 
     // read in encrypted database from file
-    values := ReadDatabase(input)
+    values := ReadDatabase[uint64](SERVER_DATABASE)
     dbSize := uint64(len(values))
 
     if dbSize != psiParams.DBBytes() {

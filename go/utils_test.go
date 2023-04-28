@@ -8,11 +8,7 @@ import (
 
 func TestReadDatabase(t *testing.T) {
     cwd, _ := os.Getwd()
-    db, bucketSize := ReadDatabase(filepath.Join(cwd, "test.edb"))
-
-    if bucketSize != 4 {
-        t.Errorf("expected bucketSize = 4, found bucketSize = %d\n", bucketSize)
-    }
+    db := ReadDatabase[uint64](filepath.Join(cwd, "test.edb"))
 
     for index, value := range db {
         if uint64(index) != value {

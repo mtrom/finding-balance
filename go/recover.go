@@ -20,7 +20,7 @@ func RecoverColumn(
     client State,
     p Params,
     info DBinfo,
-) []uint64 {
+) []byte {
     secret := client.Data[0]
     H := offline.Data[0]
     ans := answer.Data[0]
@@ -48,11 +48,11 @@ func RecoverColumn(
     ans.MatrixAdd(interm)
 
     // recover db entries from Z_p elements
-    var column []uint64
+    var column []byte
     for i := uint64(0); i < uint64(len(vals)); i += info.Ne {
         column = append(
             column,
-            ReconstructElem(vals[i*info.Ne:(i + 1)*info.Ne], 0, info),
+            byte(ReconstructElem(vals[i*info.Ne:(i + 1)*info.Ne], 0, info)),
         )
     }
 

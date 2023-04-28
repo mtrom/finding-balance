@@ -137,7 +137,7 @@ func RunProtocol(
     params Params,
     queries []uint64,
     bucketSize uint64,
-) ([]uint64) {
+) ([]byte) {
 
     start := time.Now()
     // sample lwe random matrix A
@@ -149,7 +149,7 @@ func RunProtocol(
 	comm := float64(offline.Size() * uint64(params.Logq) / (8.0 * 1024.0))
     fmt.Printf("[ go/pir ] offline:\t%dms,\t%.2fKB\n", elapsed / 1000000, comm)
 
-    var results []uint64
+    var results []byte
     queried := map[uint64]struct{}{}
     start = time.Now()
     elapsedQuery := time.Since(start)

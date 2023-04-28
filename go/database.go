@@ -19,6 +19,7 @@ func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uin
     rows := psiParams.BucketsPerCol * psiParams.BucketBytes() * ptPerEntry
     cols := psiParams.DBBytes() * ptPerEntry / rows
 
+    // TODO: support other entryBits
     if entryBits != uint64(8) { panic("unsupported for now") }
     if rows * cols < ptElems { panic("don't expect this to happen") }
 

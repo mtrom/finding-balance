@@ -24,9 +24,6 @@ namespace unbalanced_psi {
         // server's dataset
         vector<INPUT_TYPE> dataset;
 
-        // dataset of g(h(x)^a)
-        vector<u8> pir_input;
-
         // initializes the group element operations
         Curve curve;
 
@@ -66,11 +63,6 @@ namespace unbalanced_psi {
          * @params <bucket_size> max number of elements in a hashtable bucket
          */
         Server(std::string db_file, u64 hashtable_size, u64 bucket_size);
-
-        /**
-         * setup a basic server with just the private key setup
-         */
-        Server();
 
         /**
          * encrypt dataset under secret key and prepare hashtable

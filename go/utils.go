@@ -15,7 +15,7 @@ import (
 )
 
 // size of pir input hash in bytes
-const ENTRY_SIZE uint64 = 10
+const ENTRY_SIZE = 10
 
 // size of a matrix element in bytes
 const ELEMENT_SIZE = 4
@@ -123,13 +123,13 @@ func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
 /**
  * read database from file
  */
-func ReadDatabase(filename string) ([]uint64) {
+func ReadDatabase[T ~uint64 | ~byte](filename string) []T {
     file, err := os.ReadFile(filename)
     if err != nil { panic(err) }
 
     reader := bytes.NewReader(file)
 
-    var values []uint64
+    var values []T
     for {
         var value byte
         err := binary.Read(reader, binary.LittleEndian, &value)
@@ -138,7 +138,7 @@ func ReadDatabase(filename string) ([]uint64) {
         } else if err != nil {
             panic(err)
         }
-        values = append(values, uint64(value))
+        values = append(values, T(value))
     }
 
     return values
