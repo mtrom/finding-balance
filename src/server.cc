@@ -17,10 +17,15 @@ namespace unbalanced_psi {
         Server server(SERVER_OFFLINE_INPUT, hashtable_size, bucket_size);
 
         Timer timer("[ server ] ddh offline", RED);
-        vector<u8> output = server.offline();
+        auto [ b_size, database ] = server.offline();
         timer.stop();
 
-        write_dataset<u8>(output, SERVER_OFFLINE_OUTPUT);
+        // prepend the database with the b_size as bytes
+        vector<u8> output(sizeof(b_size));
+        std::memcpy(output.data(), &b_size, sizeof(b_size));
+        database.insert(database.begin(), output.begin(), output.end());
+
+        write_dataset<u8>(database, SERVER_OFFLINE_OUTPUT);
     }
 
     void Server::run_offline(u64 instances, u64 hashtable_size, u64 bucket_size) {
@@ -44,7 +49,7 @@ namespace unbalanced_psi {
         }
 
         ctpl::thread_pool threads(MAX_THREADS);
-        vector<std::future<vector<u8>>> futures(instances);
+        vector<std::future<tuple<u64, vector<u8>>>> futures(instances);
 
         Timer timer("[ server ] ddh offline", RED);
         for (auto i = 0; i < instances; i++) {
@@ -54,23 +59,27 @@ namespace unbalanced_psi {
             });
         }
 
-        vector<vector<u8>> outputs(instances);
+        vector<tuple<u64, vector<u8>>> outputs(instances);
         for (auto i = 0; i < instances; i++) {
             outputs[i] = futures[i].get();
         }
         timer.stop();
 
         for (auto i = 0; i < instances; i++) {
+            auto [b_size, database] = outputs[i];
+            // prepend the database with the bucket_size as bytes
+            vector<u8> output(sizeof(b_size));
+            std::memcpy(output.data(), &b_size, sizeof(b_size));
+            database.insert(database.begin(), output.begin(), output.end());
+
             write_dataset<u8>(
-                outputs[i],
+                database,
                 SERVER_OFFLINE_OUTPUT_PREFIX + std::to_string(i) + SERVER_OFFLINE_OUTPUT_SUFFIX
             );
         }
     }
 
-
-#if SERVER_OFFLINE_THREADS == 1
-    vector<u8> Server::offline() {
+    tuple<u64, vector<u8>> Server::offline() {
         Hashtable hashtable(hashtable_size, bucket_size);
 
         // hash elements in dataset
@@ -78,64 +87,17 @@ namespace unbalanced_psi {
             Point encrypted = hash_to_group_element(dataset[i]); // h(x)
             encrypted = encrypted * key;                         // h(x)^a
 
-            hashtable.insert(dataset[i], encrypted);
+            hashtable.insert(encrypted);
         }
 
         // add any required padding and shuffle
         hashtable.pad();
         hashtable.shuffle();
-        return hashtable.apply_hash(HASH_3_SIZE);
+        return std::make_tuple(
+            u64(hashtable.max_bucket()),
+            hashtable.apply_hash(HASH_3_SIZE)
+        );
     }
-#else
-    vector<u8> Server::offline() {
-
-        // in multiple threads, build different sections of the hashtable
-        std::future<vector<u8>> futures[SERVER_OFFLINE_THREADS];
-        for (auto i = 0; i < SERVER_OFFLINE_THREADS; i++) {
-            futures[i] = std::async(
-                &Server::partial_offline,
-                this,
-                i * (hashtable.buckets() / SERVER_OFFLINE_THREADS),
-                (i + 1) * (hashtable.buckets() / SERVER_OFFLINE_THREADS)
-            );
-        }
-
-        // combine partial results
-        vector<u8> output;
-        for (auto i = 0; i < SERVER_OFFLINE_THREADS; i++) {
-            vector<u8> partial = futures[i].get();
-            output.insert(output.end(), partial.begin(), partial.end());
-        }
-
-        return output;
-    }
-
-    vector<u8> Server::partial_offline(u64 min_bucket, u64 max_bucket) {
-
-        // each thread needs to initalize a Curve for relic's sake
-        Curve c;
-
-        Hashtable ht(hashtable.buckets());
-
-        // hash elements in dataset
-        for (auto i = 0; i < dataset.size(); i++) {
-            auto hash = Hashtable::hash(dataset[i], hashtable.buckets());
-            if (min_bucket <= hash && hash < max_bucket) {
-                Point encrypted = hash_to_group_element(dataset[i]); // h(x)
-                encrypted = encrypted * key;                         // h(x)^a
-
-                ht.insert(dataset[i], encrypted);
-            }
-        }
-
-        // add any required padding and shuffle
-        ht.pad(min_bucket, max_bucket);
-        ht.shuffle();
-
-        return ht.apply_hash(HASH_3_SIZE);
-    }
-#endif
-
 
     void Server::online(Channel channel) {
         // receive client's encrypted dataset

@@ -6,7 +6,6 @@
 
 
 #define SERVER_SEED block(406)
-#define SERVER_OFFLINE_THREADS 1
 
 #define SERVER_OFFLINE_INPUT  "out/server.db"
 #define SERVER_OFFLINE_OUTPUT "out/server.edb"
@@ -67,21 +66,10 @@ namespace unbalanced_psi {
         /**
          * encrypt dataset under secret key and prepare hashtable
          *
-         * @return bytes to be used for input for SimplePIR
+         * @return size of buckets in database elements and bytes to
+         *         be used as input for SimplePIR
          */
-        vector<u8> offline();
-
-#if SERVER_OFFLINE_THREADS != 1
-        /**
-         * prepare a partial hashset
-         *
-         * @params <min_bucket> minimum bucket to populate, inclusive
-         * @params <max_bucket> maximum bucket to populate, exclusive
-         * @return hashtable with elements and padding from min to max bucket
-         *         and empty in all other buckets
-         */
-        Hashtable partial_offline(u64 min_bucket, u64 max_bucket);
-#endif
+        tuple<u64, vector<u8>> offline();
 
         /**
          * reply to encryption request on client's set

@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
         channel.waitForConnection();
 
         Timer timer("[ server ] ddh offline", RED);
-        vector<u8> database = server.offline();
+        auto [ bucket_size, database ] = server.offline();
         timer.stop();
 
         vector<u8> ready { 1 };
@@ -63,6 +63,11 @@ int main(int argc, char *argv[]) {
         Timer online("[ server ] ddh online", RED);
         server.online(channel);
         online.stop();
+
+        // prepend the database with the bucket_size as bytes
+        vector<u8> output(sizeof(bucket_size));
+        std::memcpy(output.data(), &bucket_size, sizeof(bucket_size));
+        database.insert(database.begin(), output.begin(), output.end());
 
         write_dataset<u8>(database, SERVER_OFFLINE_OUTPUT);
     } else {

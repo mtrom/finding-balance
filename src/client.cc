@@ -54,7 +54,7 @@ namespace unbalanced_psi {
             hash_group_element(encrypted[i], HASH_3_SIZE, ptr);          // g(h(y)^a)
             ptr += HASH_3_SIZE;
 
-            queries[i] = Hashtable::hash(dataset[i], hashtable_size);
+            queries[i] = Hashtable::hash(encrypted[i], hashtable_size);
         }
 
         return std::make_tuple(hashed, queries, u64(request.size() + response.size()));

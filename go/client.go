@@ -30,13 +30,13 @@ var bufPrgReader *BufPRGReader
  *
  * @param <psiParams> params of the greater psi protocol
  */
-func RunClient(psiParams *PSIParams, expected int) {
+func RunClient(psiParams *PSIParams, expected int64) {
 
     // read in query indices
     queries := ReadQueries(CLIENT_QUERIES)
 
     // read in result of oprf
-    oprf := ReadDatabase[byte](CLIENT_OPRF_RESULT)
+    _, oprf := ReadDatabase[byte](CLIENT_OPRF_RESULT)
 
     // connect to server
     connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)
@@ -149,7 +149,7 @@ func RunClient(psiParams *PSIParams, expected int) {
 
     // find intersection between OPRF and PIR results
     subtimer = StartTimer("[ client ] find result", YELLOW)
-    found := 0
+    found := int64(0)
     for i := 0; i < len(results); i += ENTRY_SIZE {
         for j := 0; j < len(oprf); j += ENTRY_SIZE {
             if bytes.Equal(results[i:i+ENTRY_SIZE], oprf[j:j+ENTRY_SIZE]) {

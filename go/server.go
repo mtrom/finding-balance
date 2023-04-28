@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/aes"
+    "fmt"
     "net"
     "time"
 
@@ -19,10 +20,18 @@ const SERVER_DATABASE = "out/server.edb"
 func RunServer(queries uint64, psiParams *PSIParams) {
 
     // read in encrypted database from file
-    values := ReadDatabase[uint64](SERVER_DATABASE)
-    dbSize := uint64(len(values))
+    metadata, values := ReadDatabase[uint64](SERVER_DATABASE, "bucketSize")
 
-    if dbSize != psiParams.DBBytes() {
+    if psiParams.BucketSize == 0 {
+        psiParams.BucketSize = metadata["bucketSize"]
+    } else if psiParams.BucketSize != metadata["bucketSize"] {
+        panic(fmt.Sprintf(
+            "bucket size inconsistent between file and params: %d vs. %d",
+            metadata["bucketSize"], psiParams.BucketSize,
+        ))
+    }
+
+    if uint64(len(values)) != psiParams.DBBytes() {
         panic("database size inconsistent between file and params")
     }
 
@@ -40,7 +49,7 @@ func RunServer(queries uint64, psiParams *PSIParams) {
 
     // decide protocol parameters and set up database
     protocol, params, ENTRY_BITS := SetupProtocol(psiParams)
-    db := CreateDatabase(dbSize, ENTRY_BITS, params, values)
+    db := CreateDatabase(ENTRY_BITS, params, values)
 
     subtimer.End()
     subtimer = StartTimer("[ server ] lwe + hint", GREEN)

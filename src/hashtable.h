@@ -14,12 +14,12 @@ namespace unbalanced_psi {
         u64 size;
 
         // size of each bucket after padding
-        u64 max_bucket;
+        u64 bucket_size;
 
         /**
          * setup hashtable with given number of buckets of max size
          */
-        Hashtable(u64 buckets, u64 max_bucket);
+        Hashtable(u64 buckets, u64 bucket_size);
 
         /**
          * setup hashtable from file
@@ -29,7 +29,7 @@ namespace unbalanced_psi {
         /**
          * clear contents of hashtable and resize to new parameters
          */
-        void resize(u64 buckets, u64 max_bucket);
+        void resize(u64 buckets, u64 bucket_size);
 
         /**
          * hash input element to a bucket
@@ -62,7 +62,9 @@ namespace unbalanced_psi {
         void from_file(std::string filename);
 
         /**
-         * pad all buckets with random elements to be of size max_bucket
+         * pad all buckets with random elements to be bucket_size, or if
+         *  bucket_size isn't specified (i.e., is 0) then pad to the size
+         *  of the bucket with the most collisions
          */
         void pad();
 
@@ -88,6 +90,11 @@ namespace unbalanced_psi {
          * number of buckets in the table
          */
         u64 buckets();
+
+        /**
+         * size of the bucket with the most elements
+         */
+        int max_bucket();
 
         /**
          * write contents of hash table to log for debugging

@@ -8,9 +8,9 @@ import (
  * get the db dimensions given db size and plaintext modulo
  *  modified from pir.Database.ApproxSquareDatabaseDims() to factor in bucket size
  *
- * @param <psiParams> params of the greater psi protocol
- * @param <entryBits> number of bits to represent an entry
- * @param <ptMod> plaintext modulo (or p)
+ * @params <psiParams> params of the greater psi protocol
+ * @params <entryBits> number of bits to represent an entry
+ * @params <ptMod> plaintext modulo (or p)
  */
 func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uint64) {
 
@@ -31,18 +31,14 @@ func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uin
  * create the matrix database with the given parameters
  *  modified from pir.Database.MakeDB() to stack into columns rather than rows
  *
- * @param <dbSize> number of entries in the database
- * @param <entryBits> number of bits to represent an entry
- * @param <params> protocol parameters
- * @param <values> values to populate database
+ * @params <dbSize> number of entries in the database
+ * @params <entryBits> number of bits to represent an entry
+ * @params <params> protocol parameters
+ * @params <values> values to populate database
  */
-func CreateDatabase(dbSize, entryBits uint64, params *Params, values []uint64) *Database {
-	db := SetupDB(dbSize, entryBits, params)
+func CreateDatabase(entryBits uint64, params *Params, values []uint64) *Database {
+	db := SetupDB(uint64(len(values)), entryBits, params)
 	db.Data = MatrixZeros(params.L, params.M)
-
-	if uint64(len(values)) != dbSize {
-		panic("number of input database values does not match given dbSize")
-	}
 
     // when multiple entries go into each Z_p elements
 	if db.Info.Packing > 0 {
@@ -84,9 +80,9 @@ func CreateDatabase(dbSize, entryBits uint64, params *Params, values []uint64) *
  * setup the database info without needing the db itself for the client
  * modified from pir.database.SetupDB()
  *
- * @param <dbSize> number of entries in the database
- * @param <entryBits> number of bits to represent an entry
- * @param <params> protocol parameters
+ * @params <psiParams> params of the greater psi protocol
+ * @params <entryBits> number of bits to represent an entry
+ * @params <params> protocol parameters
  */
 func SetupDBInfo(psiParams *PSIParams, entryBits uint64, params *Params) (DBinfo) {
 

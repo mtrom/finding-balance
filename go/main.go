@@ -31,26 +31,26 @@ func main() {
     client := flag.Bool("client", false, "run the pir protocol as the client")
     server := flag.Bool("server", false, "run the pir protocol as the server")
 
-    bucketN       := flag.Uint64("bucket-n", 0, "total number of buckets in server's hash table")
-    bucketSize    := flag.Uint64("bucket-size", 0, "size of each bucket in server's hash table")
-    bucketsPerCol := flag.Uint64("buckets-per-col", 0, "number of buckets in a col of the database")
+    bucketN       := flag.Int64("bucket-n", -1, "total number of buckets in server's hash table")
+    bucketSize    := flag.Int64("bucket-size", -1, "size of each bucket in server's hash table")
+    bucketsPerCol := flag.Int64("buckets-per-col", -1, "number of buckets in a col of the database")
 
     //client-only flag
-    expected := flag.Int("expected", -1, "expected size of intersection")
+    expected := flag.Int64("expected", -1, "expected size of intersection")
 
     // server-only flag
     queries := flag.Int64("queries-log", -1, "log of the number of pir queries")
 
     flag.Parse()
 
-    if *bucketN == 0 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
-    if *bucketSize == 0 { fmt.Println("expected --bucket-size argument"); os.Exit(1) }
-    if *bucketsPerCol == 0 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
+    if *bucketN == -1 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
+    if *bucketSize == -1 { fmt.Println("expected --bucket-size argument"); os.Exit(1) }
+    if *bucketsPerCol == -1 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
 
     psiParams := PSIParams{
-        BucketN: *bucketN,
-        BucketSize: *bucketSize,
-        BucketsPerCol: *bucketsPerCol,
+        BucketN: uint64(*bucketN),
+        BucketSize: uint64(*bucketSize),
+        BucketsPerCol: uint64(*bucketsPerCol),
     }
 
     if *client {

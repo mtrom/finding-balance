@@ -121,13 +121,27 @@ func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
 }
 
 /**
- * read database from file
+ * read database from file including any metadata
+ *
+ * @params <filename>
+ * @params <metadata> name for each uint64 metadata value at the beginning of the database
+ * @return map of name to metadata value and the database values
  */
-func ReadDatabase[T ~uint64 | ~byte](filename string) []T {
+func ReadDatabase[T ~uint64 | ~byte](
+    filename string,
+    metadata ...string,
+) (map[string]uint64, []T) {
     file, err := os.ReadFile(filename)
     if err != nil { panic(err) }
 
     reader := bytes.NewReader(file)
+
+    metamap := make(map[string]uint64)
+    for _, name := range metadata {
+        var value uint64
+        binary.Read(reader, binary.LittleEndian, &value);
+        metamap[name] = value
+    }
 
     var values []T
     for {
@@ -141,7 +155,7 @@ func ReadDatabase[T ~uint64 | ~byte](filename string) []T {
         values = append(values, T(value))
     }
 
-    return values
+    return metamap, values
 }
 
 func WriteDatabase(filename string, values []uint64) {
