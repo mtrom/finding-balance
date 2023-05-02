@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/aes"
+    "encoding/binary"
     "fmt"
     "net"
     "time"
@@ -22,7 +23,9 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     // read in encrypted database from file
     metadata, values := ReadDatabase[uint64](SERVER_DATABASE, "bucketSize")
 
+    dynamicBucketSize := false
     if psiParams.BucketSize == 0 {
+        dynamicBucketSize = true
         psiParams.BucketSize = metadata["bucketSize"]
     } else if psiParams.BucketSize != metadata["bucketSize"] {
         panic(fmt.Sprintf(
@@ -75,6 +78,11 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     // let the client know we're ready for offline
     ready := []byte{1}
     client.Write(ready)
+
+    if dynamicBucketSize {
+        err := binary.Write(client, binary.LittleEndian, &psiParams.BucketSize)
+        if err != nil { panic(err) }
+    }
 
     // because the offline data is so large, it needs to be chunked
     WriteOverNetwork(client, offline)

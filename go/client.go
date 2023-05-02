@@ -3,11 +3,10 @@ package main
 import (
 	"crypto/aes"
     "bytes"
+    "encoding/binary"
     "fmt"
     "net"
-    // "reflect"
     "time"
-    // "unsafe"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
@@ -47,25 +46,25 @@ func RunClient(psiParams *PSIParams, expected int64) {
     if err != nil { panic(err) }
     server.SetDeadline(time.Time{})
 
+    // wait until the client is ready for offline
+    ready := make([]byte, 1)
+    server.Read(ready)
+
     ///////////////////////// OFFLINE /////////////////////////
 
     timer := StartTimer("[ client ] pir offline", BLUE)
 
     subtimer := StartTimer("[ client ] pick params", YELLOW)
+    if psiParams.BucketSize == 0 {
+        err := binary.Read(server, binary.LittleEndian, &psiParams.BucketSize)
+        if err != nil { panic(err) }
+    }
+
     // decide protocol parameters
     protocol, params, entryBits := SetupProtocol(psiParams)
     dbInfo := SetupDBInfo(psiParams, entryBits, params)
 
-
     subtimer.End()
-    PrintParams(params)
-    timer.Stop()
-
-    // wait until the client is ready for offline
-    ready := make([]byte, 1)
-    server.Read(ready)
-
-    timer.Start()
     subtimer = StartTimer("[ client ] read data", YELLOW)
 
     // read in the 'offline' data (i.e., lwe matrix seed and hint)
@@ -89,6 +88,7 @@ func RunClient(psiParams *PSIParams, expected int64) {
 
     ///////////////////////////////////////////////////////////
 
+    PrintParams(params)
     fmt.Printf("[  both  ] offline comm (MB)\t: %.3f\n", float64(len(offline)) / 1000000)
 
     // let the server know we're ready for online
