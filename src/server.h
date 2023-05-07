@@ -23,8 +23,10 @@ namespace unbalanced_psi {
         // server's dataset
         vector<INPUT_TYPE> dataset;
 
+#if !_USE_FOUR_Q_
         // initializes the group element operations
         Curve curve;
+#endif
 
         // secret key
         Number key;
@@ -75,8 +77,9 @@ namespace unbalanced_psi {
          * reply to encryption request on client's set
          *
          * @params <channel> communication channel with the client
+         * @params <queries> the number of queries to field
          */
-        void online(Channel channel);
+        void online(Channel channel, u64 queries);
 
         /**
          * @return number of elements in the dataset

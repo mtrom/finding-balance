@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <gsl/span>
 #include <ostream>
 #include <random>
 #include <string>
+
+#include <apsi/util/utils.h>
 
 using namespace std::chrono;
 
@@ -32,6 +35,28 @@ namespace unbalanced_psi {
         return datasets;
     }
 
+#if _USE_FOUR_Q_
+    Point hash_to_group_element(INPUT_TYPE input) {
+        Point element(gsl::span<const u8>{
+            static_cast<const u8*>(static_cast<void*>(&input)),
+            sizeof(INPUT_TYPE)
+        });
+        return element;
+    }
+
+    void hash_group_element(const Point& element, int length, u8* dest) {
+        array<u8, Point::hash_size> item_hash_and_label_key;
+        element.extract_hash(item_hash_and_label_key);
+        apsi::util::copy_bytes(item_hash_and_label_key.data(), length, dest);
+    }
+
+    std::string to_hex(const Point& point) {
+        vector<u8> bytes(Point::save_size);
+        point.save(Point::point_save_span_type{bytes.data(), bytes.size()});
+        return to_hex(bytes.data(), bytes.size());
+
+    }
+#else
     Point hash_to_group_element(INPUT_TYPE input) {
         RandomOracle oracle(HASH_1_SIZE);
 
@@ -56,11 +81,12 @@ namespace unbalanced_psi {
         oracle.Final(dest);
     }
 
-    std::string to_hex(Point point) {
+    std::string to_hex(const Point& point) {
         vector<u8> bytes(Point::size);
         point.toBytes(bytes.data());
         return to_hex(bytes.data(), bytes.size());
     }
+#endif
 
     std::string to_hex(u8 *bytes, u64 size) {
         static const char* digits = "0123456789ABCDEF";

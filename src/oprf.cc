@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
         channel.send(ready);
 
         Timer online("[ server ] ddh online", RED);
-        server.online(channel);
+        server.online(channel, parser.get<u64>("-queries"));
         online.stop();
 
         // prepend the database with the bucket_size as bytes

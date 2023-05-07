@@ -29,9 +29,10 @@ namespace unbalanced_psi {
         // size of the server's hashtable
         u64 hashtable_size;
 
+#if !_USE_FOUR_Q_
         // initializes the group element operations
         Curve curve;
-
+#endif
         // secret key
         Number key;
 

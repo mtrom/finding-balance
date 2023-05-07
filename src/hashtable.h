@@ -22,11 +22,6 @@ namespace unbalanced_psi {
         Hashtable(u64 buckets, u64 bucket_size);
 
         /**
-         * setup hashtable from file
-         */
-        Hashtable(std::string filename);
-
-        /**
          * clear contents of hashtable and resize to new parameters
          */
         void resize(u64 buckets, u64 bucket_size);
@@ -39,27 +34,17 @@ namespace unbalanced_psi {
         /**
          * hash encrypted input element to a bucket
          */
-        static u64 hash(Point encrypted, u64 table_size);
+        static u64 hash(const Point& encrypted, u64 table_size);
 
         /**
          * insert encrypted into a bucket given by element's hash
          */
-        void insert(INPUT_TYPE element, Point encrypted);
+        void insert(INPUT_TYPE element, const Point& encrypted);
 
         /**
          * insert encrypted into a bucket given by it's own hash
          */
-        void insert(Point encrypted);
-
-        /**
-         * write hashtable to file
-         */
-        void to_file(std::string filename);
-
-        /**
-         * read hashtable in from file
-         */
-        void from_file(std::string filename);
+        void insert(const Point& encrypted);
 
         /**
          * pad all buckets with random elements to be bucket_size, or if

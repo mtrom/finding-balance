@@ -8,6 +8,27 @@
 
 namespace unbalanced_psi {
 
+// fourq doesn't have direct Point comparison so comparing hex values
+#if _USE_FOUR_Q_
+#define POINT_VECTORS_NOT_EQUAL(x, y) compare_point_vectors(x, y)
+
+    bool compare_point_vectors(vector<Point> actual, vector<Point> expected) {
+        if (actual.size() != expected.size()) {
+            return true;
+        }
+        for (auto i = 0; i < actual.size(); i++) {
+            if (to_hex(actual[i]) != to_hex(expected[i])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+#else
+#define POINT_VECTORS_NOT_EQUAL(x, y) (x != y)
+#endif
+
+
     void test_hash_repeat() {
 
         INPUT_TYPE input(42);
@@ -36,11 +57,13 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_insert_one() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         INPUT_TYPE element = 42;
         u64 TABLE_SIZE = 1024;
         u64 MAX_BUCKET = 10;
 
-        Curve curve;
         Point encrypted = hash_to_group_element(element);
 
         vector<Point> expected{ encrypted };
@@ -49,18 +72,22 @@ namespace unbalanced_psi {
         Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
         hashtable.insert(element, encrypted);
 
-        if (hashtable.table[hashvalue] != expected) {
+        auto actual = hashtable.table[hashvalue];
+
+        if (POINT_VECTORS_NOT_EQUAL(actual, expected)) {
             throw UnitTestFail("element not found in expected bucket");
         }
     }
 
     void test_hashtable_insert_many() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
         u64 TARGET_HASH = 5;
         u64 TARGET_ELEMENTS = 2;
 
-        Curve curve;
         Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
 
         vector<Point> expected;
@@ -81,7 +108,7 @@ namespace unbalanced_psi {
             element++;
         }
 
-        if (hashtable.table[TARGET_HASH] != expected) {
+        if (POINT_VECTORS_NOT_EQUAL(hashtable.table[TARGET_HASH], expected)) {
             char errmsg[85];
             std::snprintf(
                 errmsg, sizeof(errmsg),
@@ -95,11 +122,13 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_insert_one_point() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         INPUT_TYPE element = 42;
         u64 TABLE_SIZE = 1024;
         u64 MAX_BUCKET = 10;
 
-        Curve curve;
         Point encrypted = hash_to_group_element(element);
 
         vector<Point> expected{ encrypted };
@@ -108,18 +137,20 @@ namespace unbalanced_psi {
         Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
         hashtable.insert(encrypted);
 
-        if (hashtable.table[hashvalue] != expected) {
+        if (POINT_VECTORS_NOT_EQUAL(hashtable.table[hashvalue], expected)) {
             throw UnitTestFail("element not found in expected bucket");
         }
     }
 
     void test_hashtable_insert_many_points() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
         u64 TARGET_HASH = 5;
         u64 TARGET_ELEMENTS = 2;
 
-        Curve curve;
         Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
 
         vector<Point> expected;
@@ -136,7 +167,7 @@ namespace unbalanced_psi {
             element++;
         }
 
-        if (hashtable.table[TARGET_HASH] != expected) {
+        if (POINT_VECTORS_NOT_EQUAL(hashtable.table[TARGET_HASH], expected)) {
             char errmsg[85];
             std::snprintf(
                 errmsg, sizeof(errmsg),
@@ -164,10 +195,12 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_pad_one() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 4;
 
-        Curve curve;
         INPUT_TYPE element = 42;
         Point encrypted = hash_to_group_element(element);
 
@@ -183,12 +216,14 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_pad_many() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
 
         Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
 
-        Curve curve;
         for (INPUT_TYPE i = 0; i < TABLE_SIZE; i++) {
             Point encrypted = hash_to_group_element(i);
             hashtable.insert(i, encrypted);
@@ -203,66 +238,13 @@ namespace unbalanced_psi {
         }
     }
 
-    void test_hashtable_from_file() {
-        Hashtable hashtable("src/tests/test.edb");
-
-        if (hashtable.buckets() != 1024) {
-            throw UnitTestFail("expected 1024 buckets from test.edb");
-        } else if (hashtable.size != 10240) {
-            throw UnitTestFail("expected 10240 elements in test.edb");
-        }
-
-        for (int i = 0; i < hashtable.buckets(); i++) {
-            if (hashtable.table[i].size() != 10) {
-                throw UnitTestFail("expected all buckets to have 10 items in test.edb");
-            }
-        }
-    }
-
-    void test_hashtable_to_from_file() {
-        u64 TABLE_SIZE = 8;
-        u64 MAX_BUCKET = 3;
-        vector<INPUT_TYPE> elements{ 0, 1, 2, 3, 4, 5, 6, 7 };
-        std::string FILENAME = "/tmp/dataset.edb";
-
-        Curve curve;
-        Hashtable expected(TABLE_SIZE, MAX_BUCKET);
-        for (INPUT_TYPE element : elements) {
-            Point encrypted = hash_to_group_element(element);
-            expected.insert(element, encrypted);
-        }
-
-        expected.to_file(FILENAME);
-        Hashtable actual(FILENAME);
-
-        if (expected.buckets() != actual.buckets()) {
-            throw UnitTestFail("incorrect number of buckets");
-        }
-
-        int errors = 0;
-        for (auto bucket = 0; bucket < actual.buckets(); bucket++) {
-            if (expected.table[bucket].size() != actual.table[bucket].size()) {
-                throw UnitTestFail("incorrect number of elements in bucke");
-            }
-            for (auto element = 0; bucket < actual.table[bucket].size(); element++) {
-                if (expected.table[bucket][element] != actual.table[bucket][element]) {
-                    errors++;
-                }
-            }
-        }
-
-        if (errors != 0) {
-            char errmsg[30];
-            std::snprintf(errmsg, sizeof(errmsg), "found %d mismatched elements", errors);
-            throw UnitTestFail(errmsg);
-        }
-    }
-
     void test_hashtable_shuffle() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
         u64 TABLE_SIZE = 1;
         u64 MAX_BUCKET = 1000;
 
-        Curve curve;
         INPUT_TYPE element = 42;
         Point encrypted = hash_to_group_element(element);
 
@@ -275,7 +257,8 @@ namespace unbalanced_psi {
         bool found = false;
 
         for (auto i = 0; i < bucket.size(); i++) {
-            if (bucket[i] != encrypted) { continue; }
+            // comparing hex since fourq doesn't have direct Point comparison
+            if (to_hex(bucket[i]) != to_hex(encrypted)) { continue; }
             if (i == 0) {
                 throw UnitTestFail("inserted element still at front of bucket");
             }

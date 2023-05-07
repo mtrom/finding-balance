@@ -6,12 +6,10 @@
 
 namespace unbalanced_psi {
 
-    Server::Server(std::string filename, u64 hsize, u64 bsize)
-        : dataset(read_dataset<INPUT_TYPE>(filename)), hashtable_size(hsize), bucket_size(bsize) {
-        // randomly sample secret key
-        PRNG prng(SERVER_SEED);
-        key.randomize(prng);
-    }
+    Server::Server(std::string filename, u64 hsize, u64 bsize) :
+        dataset(read_dataset<INPUT_TYPE>(filename)),
+        hashtable_size(hsize),
+        bucket_size(bsize) { }
 
     void Server::run_offline(u64 hashtable_size, u64 bucket_size) {
         Server server(SERVER_OFFLINE_INPUT, hashtable_size, bucket_size);
@@ -54,7 +52,9 @@ namespace unbalanced_psi {
         Timer timer("[ server ] ddh offline", RED);
         for (auto i = 0; i < instances; i++) {
             futures[i] = threads.push([&servers, i](int) {
+#if !_USE_FOUR_Q_
                 Curve c; // inits relic on the thread
+#endif
                 return servers[i].offline();
             });
         }
@@ -82,11 +82,23 @@ namespace unbalanced_psi {
     tuple<u64, vector<u8>> Server::offline() {
         Hashtable hashtable(hashtable_size, bucket_size);
 
+#if _USE_FOUR_Q_
+        Point::MakeRandomNonzeroScalar(key);
+#else
+        // randomly sample secret key
+        block seed(SERVER_SEED);
+        PRNG prng(seed);
+        key.randomize(prng);
+#endif
+
         // hash elements in dataset
         for (auto i = 0; i < dataset.size(); i++) {
             Point encrypted = hash_to_group_element(dataset[i]); // h(x)
+#if _USE_FOUR_Q_
+            encrypted.scalar_multiply(key, true);
+#else
             encrypted = encrypted * key;                         // h(x)^a
-
+#endif
             hashtable.insert(encrypted);
         }
 
@@ -99,7 +111,7 @@ namespace unbalanced_psi {
         );
     }
 
-    void Server::online(Channel channel) {
+    void Server::online(Channel channel, u64 queries) {
         // receive client's encrypted dataset
         vector<u8> request;
         channel.recv(request);
@@ -108,11 +120,25 @@ namespace unbalanced_psi {
 
         // encrypt each point under the server's key
         Point point;
-        for (auto i = 0; i < request.size() / point.sizeBytes(); i++) {
-            point.fromBytes(request.data() + (i * point.sizeBytes()));
-            point = point * key;
-            point.toBytes(response.data() + (i * point.sizeBytes()));
+#if _USE_FOUR_Q_
+        for (auto i = 0; i < request.size() / Point::save_size; i++) {
+            point.load(Point::point_save_span_const_type{
+                request.data() + (i * Point::save_size),
+                Point::save_size
+            });
+            point.scalar_multiply(key, true);
+            point.save(Point::point_save_span_type{
+                response.data() + (i * Point::save_size),
+                Point::save_size
+            });
         }
+#else
+        for (auto i = 0; i < request.size() / Point::size; i++) {
+            point.fromBytes(request.data() + (i * Point::size));
+            point = point * key;
+            point.toBytes(response.data() + (i * Point::size));
+        }
+#endif
 
         channel.send(response);
     }

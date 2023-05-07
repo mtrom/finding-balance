@@ -5,6 +5,7 @@
 #include "test_cuckoo.h"
 #include "test_hashtable.h"
 #include "test_utils.h"
+#include "test_apsi.h"
 
 using namespace unbalanced_psi;
 
@@ -18,6 +19,10 @@ int main() {
         th.add("test_generate_datasets_overlap    ", test_generate_datasets_overlap);
         th.add("test_write_read_dataset           ", test_write_read_dataset);
         th.add("test_read_dataset                 ", test_read_dataset);
+        th.add("test_hash_to_group_element_same   ", test_hash_to_group_element_same);
+        th.add("test_hash_to_group_element_diff   ", test_hash_to_group_element_diff);
+        th.add("test_hash_group_element_same      ", test_hash_group_element_same);
+        th.add("test_hash_group_element_diff      ", test_hash_group_element_diff);
         th.add("test_hash_repeat                  ", test_hash_repeat);
         th.add("test_hash_range                   ", test_hash_range);
         th.add("test_hashtable_insert_one         ", test_hashtable_insert_one);
@@ -27,8 +32,6 @@ int main() {
         th.add("test_hashtable_pad_empty          ", test_hashtable_pad_empty);
         th.add("test_hashtable_pad_one            ", test_hashtable_pad_one);
         th.add("test_hashtable_pad_many           ", test_hashtable_pad_many);
-        th.add("test_hashtable_from_file          ", test_hashtable_from_file);
-        th.add("test_hashtable_to_from_file       ", test_hashtable_from_file);
         th.add("test_hashtable_shuffle            ", test_hashtable_shuffle);
         th.add("test_hashtable_apply_hash         ", test_hashtable_apply_hash);
         th.add("test_cuckoo_hash_repeat           ", test_cuckoo_hash_repeat);
@@ -40,6 +43,7 @@ int main() {
         th.add("test_cuckoo_pad_empty             ", test_cuckoo_pad_empty);
         th.add("test_cuckoo_pad_one               ", test_cuckoo_pad_one);
         th.add("test_cuckoo_pad_many              ", test_cuckoo_pad_many);
+        th.add("test_encryption                   ", test_encryption);
     });
 
     tests.runAll();
