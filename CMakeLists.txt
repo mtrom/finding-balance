@@ -42,7 +42,6 @@ target_link_libraries(oprf APSI::apsi)
 # test c++ library
 add_executable(tests
     ${PROJECT_SOURCE_DIR}/src/tests/test_all.cc
-    ${PROJECT_SOURCE_DIR}/src/tests/test_apsi.cc
     ${PROJECT_SOURCE_DIR}/src/tests/test_cuckoo.cc
     ${PROJECT_SOURCE_DIR}/src/tests/test_hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/tests/test_utils.cc

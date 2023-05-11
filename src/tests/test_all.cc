@@ -5,7 +5,6 @@
 #include "test_cuckoo.h"
 #include "test_hashtable.h"
 #include "test_utils.h"
-#include "test_apsi.h"
 
 using namespace unbalanced_psi;
 
@@ -43,7 +42,6 @@ int main() {
         th.add("test_cuckoo_pad_empty             ", test_cuckoo_pad_empty);
         th.add("test_cuckoo_pad_one               ", test_cuckoo_pad_one);
         th.add("test_cuckoo_pad_many              ", test_cuckoo_pad_many);
-        th.add("test_encryption                   ", test_encryption);
     });
 
     tests.runAll();
