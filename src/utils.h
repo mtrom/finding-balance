@@ -25,6 +25,42 @@ using namespace std::chrono;
 namespace unbalanced_psi {
 
     /**
+     * holds parameters to the greater psi protocol
+     */
+    struct PSIParams {
+        // number of buckets in the cuckoo table
+        u64 cuckoo_size;
+
+        // size of each bucket in the cuckoo table
+        u64 cuckoo_pad;
+
+        // number of hashes to use in the cuckoo table
+        u64 cuckoo_hashes;
+
+        // number of buckets in each hashtable
+        u64 hashtable_size;
+
+        // size of each bucket in each hashtable
+        u64 hashtable_pad;
+
+        PSIParams(const PSIParams&) = default;
+
+        // when not using a cuckoo table
+        PSIParams(u64 hsize, u64 hpad) :
+            cuckoo_size(1), cuckoo_pad(0), cuckoo_hashes(0),
+            hashtable_size(hsize), hashtable_pad(hpad) { }
+
+        // when using a cuckoo table
+        PSIParams(u64 csize, u64 cpad, u64 chashes, u64 hsize, u64 hpad) :
+            cuckoo_size(csize), cuckoo_pad(cpad), cuckoo_hashes(chashes),
+            hashtable_size(hsize), hashtable_pad(hpad) { }
+
+        // if the hashtable padding is 0 then each bucket will be padded
+        //  to the size of the bucket with the most collisions
+        bool dynamic_padding() { return hashtable_pad == 0; }
+    };
+
+    /**
      * generate a mock dataset
      *
      * @param <size> desired number of elements in the dataset
@@ -53,6 +89,19 @@ namespace unbalanced_psi {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) { throw std::runtime_error("cannot open " + filename); }
         file.write((const char*) dataset.data(), dataset.size() * sizeof(T));
+    }
+
+    /**
+     * write arbitrary dataset to binary file
+     *
+     * @param <dataset> dataset to write to file
+     * @param <filename> filename to write to
+     */
+    template <typename T>
+    void write_dataset(T* dataset, int size, std::string filename) {
+        std::ofstream file(filename, std::ios::out | std::ios::binary);
+        if (!file) { throw std::runtime_error("cannot open " + filename); }
+        file.write((const char*) dataset, size * sizeof(T));
     }
 
     /**
@@ -101,7 +150,6 @@ namespace unbalanced_psi {
      */
     void hash_group_element(const Point& element, int length, u8* dest);
 
-
     /**
      * convert a Point into a hex string for debugging
      */
@@ -112,6 +160,9 @@ namespace unbalanced_psi {
      */
     std::string to_hex(u8 *bytes, u64 size);
 
+    /**
+     * class to unify time benchmarking
+     */
     class Timer {
         public:
             Timer(std::string msg, std::string color = WHITE);

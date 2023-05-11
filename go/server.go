@@ -10,7 +10,11 @@ import (
     . "github.com/ahenzinger/simplepir/pir"
 )
 
-const SERVER_DATABASE = "out/server.edb"
+const (
+    SERVER_DATABASE = "out/server.edb"
+    SERVER_DATABASE_PREFIX = "out/"
+    SERVER_DATABASE_SUFFIX = "/server.edb"
+)
 
 /**
  * run protocol as the server
@@ -124,4 +128,142 @@ func RunServer(queries uint64, psiParams *PSIParams) {
 
     timer.End()
     answerTimer.Print()
+}
+
+type ServerState struct {
+    params      *Params
+    protocol    SimplePIR
+    db          *Database
+    lweMatrix   State
+}
+
+func RunServerOffline(
+    psiParams *PSIParams,
+    values []uint64,
+) (ServerState, []byte) {
+
+    // decide protocol parameters and set up database
+    protocol, params, ENTRY_BITS := SetupProtocol(psiParams)
+    db := CreateDatabase(ENTRY_BITS, params, values)
+
+    // sample seed for lwe random matrix A
+    lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
+
+    // calculate hint seed
+    _, hint := protocol.Setup(db, lweMatrix, *params)
+
+    // gather lwe matrix seed and hint into 'offline' dataset
+    var bytes = make([]byte, aes.BlockSize)
+    ptr := *seed.Seed
+    copy(bytes[:], ptr[:])
+    offline := append(bytes, MatrixToBytes(hint.Data[0])...)
+
+    results := ServerState{
+        params: params,
+        protocol: protocol,
+        db: db,
+        lweMatrix: lweMatrix,
+    }
+
+    return results, offline
+}
+
+func RunServerOnline(
+    state *ServerState,
+    client net.Conn,
+) {
+    // expected size of the query vector
+    queryRows := state.params.M
+
+	// compensate for this squish artifact
+	if state.params.M % state.db.Info.Squishing != 0 {
+		queryRows += state.db.Info.Squishing - (state.params.M % state.db.Info.Squishing)
+	}
+
+    // read in query vector
+    req := ReadOverNetwork(client, queryRows * ELEMENT_SIZE)
+    query := BytesToMatrix(req, queryRows, 1)
+
+    // generate answer and send to client
+    answer := state.protocol.Answer(
+        state.db,
+        MakeMsgSlice(MakeMsg(query)),
+        MakeState(),
+        state.lweMatrix,
+        *state.params,
+    )
+    res := MatrixToBytes(answer.Data[0])
+
+    WriteOverNetwork(client, res)
+}
+
+/**
+ * run protocol
+ */
+func RunServerAsync(
+    queries uint64,
+    psiParams *PSIParams,
+    dynamicBucketSize bool,
+    values []uint64,
+    client net.Conn,
+    offline_comm chan<- int64,
+    online_comm chan<- int64,
+) {
+    ///////////////////////// OFFLINE /////////////////////////
+
+    // decide protocol parameters and set up database
+    protocol, params, ENTRY_BITS := SetupProtocol(psiParams)
+    db := CreateDatabase(ENTRY_BITS, params, values)
+
+    // sample seed for lwe random matrix A
+    lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
+
+    // calculate hint seed
+    serverState, hint := protocol.Setup(db, lweMatrix, *params)
+
+    // gather lwe matrix seed and hint into 'offline' dataset
+    var bytes = make([]byte, aes.BlockSize)
+    ptr := *seed.Seed
+    copy(bytes[:], ptr[:])
+    offline := append(bytes, MatrixToBytes(hint.Data[0])...)
+
+    if dynamicBucketSize {
+        err := binary.Write(client, binary.LittleEndian, &psiParams.BucketSize)
+        if err != nil { panic(err) }
+    }
+
+    WriteOverNetwork(client, offline)
+
+    ///////////////////////////////////////////////////////////
+
+    ////////////////////////// ONLINE /////////////////////////
+
+    // expected size of the query vector
+    queryRows := params.M
+
+	// compensate for this squish artifact
+	if params.M % db.Info.Squishing != 0 {
+		queryRows += db.Info.Squishing - (params.M % db.Info.Squishing)
+	}
+
+    comm := 0
+    for i := uint64(0); i < queries; i++ {
+        // read in query vector
+        req := ReadOverNetwork(client, queryRows * ELEMENT_SIZE)
+        query := BytesToMatrix(req, queryRows, 1)
+
+        comm += len(req)
+
+        // generate answer and send to client
+        answer := protocol.Answer(db, MakeMsgSlice(MakeMsg(query)), serverState, lweMatrix, *params)
+        res := MatrixToBytes(answer.Data[0])
+
+        WriteOverNetwork(client, res)
+
+        comm += len(res)
+    }
+
+    // size of communication
+    offline_comm <- int64(len(offline))
+    online_comm <- int64(comm)
 }

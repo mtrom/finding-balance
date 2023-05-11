@@ -1,8 +1,9 @@
 #pragma once
 
 #include "defines.h"
+#include "utils.h"
 
-#define MAX_INSERT  u64(10)
+#define MAX_INSERT u64(10)
 
 namespace unbalanced_psi {
     class Cuckoo {
@@ -22,9 +23,11 @@ namespace unbalanced_psi {
 
         void insert(INPUT_TYPE element);
 
+        void insert(vector<INPUT_TYPE> elements);
+
         void insert_all(INPUT_TYPE element);
 
-        void to_file(std::string fn_prefix, std::string fn_suffix);
+        void insert_all(vector<INPUT_TYPE> elements);
 
         void pad(u64 to);
 

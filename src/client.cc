@@ -2,17 +2,23 @@
 #include <fstream>
 #include <iterator>
 #include <ostream>
+#include <optional>
 #include <vector>
 
 #include "client.h"
+#include "cuckoo.h"
+
+#define EMPTY_CUCKOO_BUCKET 0
 
 namespace unbalanced_psi {
 
-    Client::Client(std::string filename, u64 ht_size) :
-        dataset(read_dataset<INPUT_TYPE>(filename)), hashtable_size(ht_size) {}
+    Client::Client(vector<INPUT_TYPE> db, PSIParams& p) :
+        dataset(db), params(p) {}
+
+    Client::Client(std::string filename, PSIParams& p) :
+        dataset(read_dataset<INPUT_TYPE>(filename)), params(p) {}
 
     void Client::offline() {
-
 #if _USE_FOUR_Q_
         Point::MakeRandomNonzeroScalar(key);
 #else
@@ -22,34 +28,49 @@ namespace unbalanced_psi {
         key.randomize(prng);
 #endif
 
-        encrypted.resize(dataset.size());
+        Cuckoo cuckoo(params.cuckoo_hashes, params.cuckoo_size);
+        if (params.cuckoo_size > 1) {
+            for (auto element : dataset) {
+                cuckoo.insert(element);
+            }
+            encrypted.resize(params.cuckoo_size);
+        } else {
+            encrypted.resize(dataset.size());
+        }
 
-        // hash elements in dataset
-        for (auto i = 0; i < dataset.size(); i++) {
-            encrypted[i] = hash_to_group_element(dataset[i]); // h(y)
+        for (auto i = 0; i < encrypted.size(); i++) {
+            // if there's an empty cuckoo bucket don't bother creating an element
+            if (params.cuckoo_size > 1 && cuckoo.table[i].empty()) {
+                encrypted[i] = std::nullopt;
+                continue;
+            }
+            INPUT_TYPE element = params.cuckoo_size > 1 ? cuckoo.table[i][0] : dataset[i];
+            auto point = hash_to_group_element(element); // h(y)
 #if _USE_FOUR_Q_
-            encrypted[i].scalar_multiply(key, false);
+            point.scalar_multiply(key, false); // h(y)^b
 #else
-            encrypted[i] = encrypted[i] * key;        // h(y)^b
+            point = point * key;               // h(y)^b
 #endif
+            encrypted[i] = std::optional<Point>{point};
         }
     }
 
-    tuple<vector<u8>, vector<u64>, u64> Client::online(Channel channel) {
-
+    tuple<vector<u8>, vector<u64>> Client::online(Channel channel) {
         // send encrypted dataset
 #if _USE_FOUR_Q_
-        vector<u8> request(encrypted.size() * Point::save_size);
+        vector<u8> request(dataset.size() * Point::save_size);
         auto iter = request.data();
-        for (Point element : encrypted) {
-            element.save(Point::point_save_span_type{iter, Point::save_size});
+        for (std::optional<Point> element : encrypted) {
+            if (!element) { continue; }
+            element.value().save(Point::point_save_span_type{iter, Point::save_size});
             iter += Point::save_size;
         }
 #else
-        vector<u8> request(encrypted.size() * Point::size);
+        vector<u8> request(dataset.size() * Point::size);
         auto iter = request.data();
-        for (Point element : encrypted) {
-            element.toBytes(iter);
+        for (std::optional<Point> element : encrypted) {
+            if (!element) { continue; }
+            element.value().toBytes(iter);
             iter += Point::size;
         }
 #endif
@@ -68,29 +89,29 @@ namespace unbalanced_psi {
         Number inverse;
         Point::InvertScalar(key, inverse);
 #endif
+        auto res_index = 0;
         for (auto i = 0; i < encrypted.size(); i++) {
+            // if there's an empty cuckoo bucket it doens't matter what the query / hashes are
+            if (!encrypted[i]) { ptr += HASH_3_SIZE; continue; }
+            Point point;
+
 #if _USE_FOUR_Q_
-            encrypted[i].load(Point::point_save_span_const_type{
-                response.data() + (i * Point::save_size),
+            point.load(Point::point_save_span_const_type{
+                response.data() + (res_index * Point::save_size),
                 Point::save_size
             }); // h(y)^ab
-            encrypted[i].scalar_multiply(inverse, false);
+            point.scalar_multiply(inverse, false);
 #else
-            encrypted[i].fromBytes(response.data() + (i * Point::size)); // h(y)^ab
-            encrypted[i] = encrypted[i] * key.inverse();                 // h(y)^a
+            point.fromBytes(response.data() + (res_index * Point::size)); // h(y)^ab
+            point = point * key.inverse();         // h(y)^a
 #endif
-            hash_group_element(encrypted[i], HASH_3_SIZE, ptr);          // g(h(y)^a)
-            ptr += HASH_3_SIZE;
+            hash_group_element(point, HASH_3_SIZE, ptr);          // g(h(y)^a)
+            queries[i] = Hashtable::hash(point, params.hashtable_size);
 
-            queries[i] = Hashtable::hash(encrypted[i], hashtable_size);
+            ptr += HASH_3_SIZE;
+            res_index++;
         }
 
-#if _USE_FOUR_Q_
-        // uploaded and downloaded each point
-        u64 comm = Point::save_size * encrypted.size() * 2;
-#else
-        u64 comm = u64(request.size() + response.size());
-#endif
-        return std::make_tuple(hashed, queries, comm);
+        return std::make_tuple(hashed, queries);
     }
 }

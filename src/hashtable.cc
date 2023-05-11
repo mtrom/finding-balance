@@ -52,6 +52,10 @@ namespace unbalanced_psi {
         u64 index = hash(encrypted, table.size());
         table[index].push_back(encrypted);
         size++;
+
+        if (table[index].size() > bucket_size && bucket_size != 0) {
+            throw std::overflow_error("more than bucket_size collisions");
+        }
     }
 
     void Hashtable::pad(u64 min, u64 max) {

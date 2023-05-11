@@ -16,9 +16,11 @@
 #include <gsl/span>
 
 #define PADDING_SEED 1986
-#define MAX_THREADS 32
+#define MAX_THREADS 8
+#define IOS_THREADS 8
 
 #define _USE_FOUR_Q_ true
+
 
 #if _USE_FOUR_Q_
 #define ENCRYPT(element, key) element.scalar_multiply(key, true)

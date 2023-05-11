@@ -1,4 +1,9 @@
+#include <future>
+#include "../CTPL/ctpl.h"
+
 #include "cuckoo.h"
+#include "server.h"
+#include "client.h"
 #include "utils.h"
 
 namespace unbalanced_psi {
@@ -65,26 +70,34 @@ namespace unbalanced_psi {
         }
     }
 
+    void Cuckoo::insert_all(vector<INPUT_TYPE> elements) {
+        // if we aren't cuckoo hashing don't bother with the hashes
+        if (table.size() == 1) {
+            table[0] = elements;
+        } else {
+            for (auto element : elements) {
+                insert_all(element);
+            }
+        }
+    }
 
     void Cuckoo::pad(u64 to) {
+        if (to == 0) { return; }
         block seed(PADDING_SEED);
         PRNG prng(seed);
 
         for (u64 index = 0; index < table.size(); index++) {
             if (table[index].size() > to) {
-                throw std::runtime_error("cuckoo bucket already exceeded padding");
+                throw std::runtime_error(
+                    "cuckoo bucket already exceeded padding: "
+                    + std::to_string(table[index].size()) + " vs. "
+                    + std::to_string(to)
+                );
             }
             while (table[index].size() < to) {
                 table[index].push_back(prng.get<INPUT_TYPE>());
                 size++;
             }
-        }
-    }
-
-    void Cuckoo::to_file(std::string fn_prefix, std::string fn_suffix) {
-        for (int i = 0; i < table.size(); i++) {
-            std::string fn = fn_prefix + std::to_string(i) + fn_suffix;
-            write_dataset(table[i], fn);
         }
     }
 
@@ -101,4 +114,163 @@ namespace unbalanced_psi {
             }
         }
     }
+
+#if false
+    void Cuckoo::run_server(PSIParams& params) {
+
+        // set up a server instance for each bucket
+        vector<Server> servers;
+        for (auto dataset : table) {
+            servers.push_back(Server(dataset, params));
+        }
+
+        // set up the network connections
+        IOService ios(IOS_THREADS);
+        ios.mPrint = false;
+
+        vector<Channel> channels;
+        for (auto i = 0; i < servers.size(); i++) {
+            Session session(
+                ios,
+                "127.0.0.1:1212",
+                SessionMode::Server,
+                ("pirpsi-" + std::to_string(i))
+            );
+            Channel channel = session.addChannel();
+            channels.push_back(channel);
+        }
+
+        ctpl::thread_pool threads(MAX_THREADS);
+
+        /////////////////////////////  OFFLINE  //////////////////////////////
+        Timer offline_timer("[ server ] ddh offline", RED);
+
+        vector<std::future<tuple<u64, vector<u8>>>> offline_futures(table.size());
+        for (auto i = 0; i < servers.size(); i++) {
+            offline_futures[i] = threads.push([&servers, i](int) {
+                return servers[i].offline();
+            });
+        }
+
+        for (auto i = 0; i < table.size(); i++) {
+            offline_futures[i].wait();
+        }
+        offline_timer.stop();
+        //////////////////////////////////////////////////////////////////////
+
+        //////////////////////////////  ONLINE  //////////////////////////////
+        Timer online_timer("[ server ] ddh online", RED);
+        vector<std::future<void>> online_futures(table.size());
+        for (auto i = 0; i < servers.size(); i++) {
+            online_futures[i] = threads.push([&servers, &channels, i](int) {
+                servers[i].online(channels[i]);
+            });
+        }
+
+        for (auto i = 0; i < table.size(); i++) {
+            online_futures[i].wait();
+        }
+        online_timer.stop();
+        //////////////////////////////////////////////////////////////////////
+
+        // write databases to file
+        for (auto i = 0; i < table.size(); i++) {
+            auto [ bucket_size, database ] = offline_futures[i].get();
+
+            // prepend the database with the bucket_size as bytes
+            vector<u8> bytes(sizeof(bucket_size));
+            std::memcpy(bytes.data(), &bucket_size, sizeof(bucket_size));
+            database.insert(database.begin(), bytes.begin(), bytes.end());
+
+            write_dataset<u8>(
+                database,
+                SERVER_OFFLINE_OUTPUT_PREFIX
+                + std::to_string(i)
+                + SERVER_OFFLINE_OUTPUT_SUFFIX
+            );
+        }
+    }
+
+    void Cuckoo::run_client(PSIParams& params) {
+
+        // set up a client instance for each bucket
+        vector<Client> clients;
+        for (auto dataset : table) {
+            clients.push_back(Client(dataset, params));
+        }
+
+        // set up the network connections
+        IOService ios(IOS_THREADS);
+        ios.mPrint = false;
+
+        vector<Channel> channels;
+        for (auto i = 0; i < clients.size(); i++) {
+            Session session(
+                ios,
+                "127.0.0.1:1212",
+                SessionMode::Client,
+                "pirpsi-" + std::to_string(i)
+            );
+            Channel channel = session.addChannel();
+            channels.push_back(channel);
+        }
+
+        ctpl::thread_pool threads(MAX_THREADS);
+
+        /////////////////////////////  OFFLINE  //////////////////////////////
+        Timer offline_timer("[ client ] ddh offline", BLUE);
+
+        vector<std::future<void>> offline_futures(table.size());
+        for (auto i = 0; i < clients.size(); i++) {
+            offline_futures[i] = threads.push([&clients, i](int) {
+                clients[i].offline();
+            });
+        }
+
+        for (auto i = 0; i < table.size(); i++) {
+            offline_futures[i].wait();
+        }
+        offline_timer.stop();
+        //////////////////////////////////////////////////////////////////////
+
+        //////////////////////////////  ONLINE  //////////////////////////////
+        Timer online_timer("[ client ] ddh online", BLUE);
+        vector<std::future<tuple<vector<u8>, vector<u64>, u64>>> online_futures(table.size());
+        for (auto i = 0; i < clients.size(); i++) {
+            online_futures[i] = threads.push([&clients, &channels, i](int) {
+                return clients[i].online(channels[i]);
+            });
+        }
+
+        for (auto i = 0; i < table.size(); i++) {
+            online_futures[i].wait();
+        }
+        online_timer.stop();
+        //////////////////////////////////////////////////////////////////////
+
+        u64 total_comm(0);
+
+        // write databases to file
+        for (auto i = 0; i < table.size(); i++) {
+            auto [ hashed, queries, comm ] = online_futures[i].get();
+
+            total_comm += comm;
+
+            write_dataset(
+                hashed,
+                CLIENT_ONLINE_OUTPUT_PREFIX
+                + std::to_string(i)
+                + CLIENT_ONLINE_OUTPUT_SUFFIX
+            );
+            write_dataset(
+                queries,
+                CLIENT_QUERY_OUTPUT_PREFIX
+                + std::to_string(i)
+                + CLIENT_QUERY_OUTPUT_SUFFIX
+            );
+        }
+
+        std::cout << "[  both  ] online comm (bytes)\t: " << total_comm << std::endl;
+    }
+#endif
 }

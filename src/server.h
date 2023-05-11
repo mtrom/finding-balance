@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.h"
+#include "cuckoo.h"
 #include "hashtable.h"
 #include "utils.h"
 
@@ -27,51 +28,36 @@ namespace unbalanced_psi {
         // initializes the group element operations
         Curve curve;
 #endif
-
         // secret key
         Number key;
 
-        // number of buckets in the hashtable
-        u64 hashtable_size;
-
-        // max number of elements in the hashtable
-        u64 bucket_size;
+        // parameters for psi protocol
+        PSIParams params;
 
         public:
 
         /**
-         * run the server's offline portion of the protocol
-         *
-         * @params <hashtable_size> number of buckets in the hashtable
-         * @params <bucket_size> max number of elements in a hashtable bucket
-         */
-        static void run_offline(u64 hashtable_size, u64 bucket_size);
-
-        /**
-         * run many server offlines for each cuckoo hash bucket
-         *
-         * @params <instances> number of cuckoo buckets being run
-         * @params <hashtable_size> number of buckets in the psi hashtable
-         * @params <bucket_size> max number of elements in a psi hashtable bucket
-         */
-        static void run_offline(u64 instances, u64 hashtable_size, u64 bucket_size);
-
-        /**
          * setup server with input dataset and parameters
+         */
+        Server(vector<INPUT_TYPE> dataset, PSIParams& params);
+
+        /**
+         * setup server from file with parameters
          *
-         * @params <filename> filename for dataset
-         * @params <hashtable_size> number of buckets in the hashtable
+         * @params <cuckoo_size> number of buckets in the cuckoo table
+         * @params <hashtable_size> number of buckets in each hashtable
          * @params <bucket_size> max number of elements in a hashtable bucket
          */
-        Server(std::string db_file, u64 hashtable_size, u64 bucket_size);
+        Server(std::string db_file, PSIParams& params);
 
         /**
          * encrypt dataset under secret key and prepare hashtable
          *
-         * @return size of buckets in database elements and bytes to
-         *         be used as input for SimplePIR
+         * @return for each cuckoo table bucket, return (1) the number of dataset
+         *         elements in each bucket of the hashtable, and (2) the bytes
+         *         to be used as input for SimplePIR
          */
-        tuple<u64, vector<u8>> offline();
+        vector<tuple<u64, vector<u8>>> offline();
 
         /**
          * reply to encryption request on client's set
@@ -79,7 +65,7 @@ namespace unbalanced_psi {
          * @params <channel> communication channel with the client
          * @params <queries> the number of queries to field
          */
-        void online(Channel channel, u64 queries);
+        void online(Channel channel);
 
         /**
          * @return number of elements in the dataset
