@@ -47,10 +47,7 @@ go build -o bin/serverpir go/server.go
 I think `go get` should be okay now that its in the `go.mod` file.
 
 ## TODO
-- test changes to parameter picking in go
 - random seeds aren't very random
-- cuckoo hashing for multiple queries
-- test changes to ENTRY_BITS
 - set up for easy benchmarking
 
 ## Notes to Self

@@ -39,7 +39,10 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     }
 
     if uint64(len(values)) != psiParams.DBBytes() {
-        panic("database size inconsistent between file and params")
+        panic(fmt.Sprintf(
+            "database size inconsistent between file and params: %d vs. %d",
+            len(values), psiParams.DBBytes(),
+        ))
     }
 
     // connect to client

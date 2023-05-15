@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <tuple>
+#include <future>
 
 #include <cryptoTools/Common/TestCollection.h>
 #include <cryptoTools/Crypto/PRNG.h>
@@ -34,6 +35,7 @@ namespace unbalanced_psi {
     using std::array;
     using std::tuple;
     using std::vector;
+    using std::future;
 
     // datatypes from osuCrypto
     using i64 = osuCrypto::i64;

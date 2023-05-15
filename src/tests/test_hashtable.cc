@@ -238,6 +238,67 @@ namespace unbalanced_psi {
         }
     }
 
+    void test_hashtable_pad_empty_threads() {
+        u64 TABLE_SIZE = 8;
+        u64 MAX_BUCKET = 3;
+        u8 THREADS = 8;
+
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
+        hashtable.pad(THREADS);
+
+        for (int i = 0; i < hashtable.buckets(); i++) {
+            if (hashtable.table[i].size() != MAX_BUCKET) {
+                throw UnitTestFail("at least one bucket not padded to max bucket size");
+            }
+        }
+    }
+
+    void test_hashtable_pad_one_threads() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
+        u64 TABLE_SIZE = 16;
+        u64 MAX_BUCKET = 4;
+        u8 THREADS = 8;
+
+        INPUT_TYPE element = 42;
+        Point encrypted = hash_to_group_element(element);
+
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
+        hashtable.insert(element, encrypted);
+        hashtable.pad(THREADS);
+
+        for (int i = 0; i < hashtable.buckets(); i++) {
+            if (hashtable.table[i].size() != MAX_BUCKET) {
+                throw UnitTestFail("at least one bucket not padded to max bucket size");
+            }
+        }
+    }
+
+    void test_hashtable_pad_many_threads() {
+#if !_USE_FOUR_Q_
+        Curve c;
+#endif
+        u64 TABLE_SIZE = 16;
+        u64 MAX_BUCKET = 10;
+        u8 THREADS = 8;
+
+        Hashtable hashtable(TABLE_SIZE, MAX_BUCKET);
+
+        for (INPUT_TYPE i = 0; i < TABLE_SIZE; i++) {
+            Point encrypted = hash_to_group_element(i);
+            hashtable.insert(i, encrypted);
+        }
+
+        hashtable.pad(THREADS);
+
+        for (int i = 0; i < hashtable.buckets(); i++) {
+            if (hashtable.table[i].size() != MAX_BUCKET) {
+                throw UnitTestFail("at least one bucket not padded to max bucket size");
+            }
+        }
+    }
+
     void test_hashtable_shuffle() {
 #if !_USE_FOUR_Q_
         Curve c;

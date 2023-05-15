@@ -1,5 +1,4 @@
 #include <future>
-#include "../CTPL/ctpl.h"
 
 #include "cuckoo.h"
 #include "server.h"
@@ -59,8 +58,6 @@ namespace unbalanced_psi {
             u64 index = hash(element, hash_n);
 
             if (std::find(indexes.begin(), indexes.end(), index) != indexes.end()) {
-                // TODO: should we?
-                // throw std::runtime_error("collision in hash different functions");
                 continue;
             }
 

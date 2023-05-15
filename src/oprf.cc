@@ -21,7 +21,8 @@ int main(int argc, char *argv[]) {
         parser.get<u64>("-cuckoo-pad"),
         parser.get<u64>("-cuckoo-hashes"),
         parser.get<u64>("-hashtable-n"),
-        parser.getOr<u64>("-hashtable-pad", 0)
+        parser.getOr<u64>("-hashtable-pad", 0),
+        parser.getOr<int>("-threads", 1)
     );
 
     if (parser.isSet("client") || parser.isSet("-client")) {
@@ -32,10 +33,12 @@ int main(int argc, char *argv[]) {
         Channel channel = session.addChannel();
         channel.waitForConnection();
 
+        Timer offline("[ client ] ddh offline", BLUE);
         client.offline();
+        offline.stop();
 
-        vector<u8> ready;
-        channel.recv(ready);
+        vector<u8> ready(1);
+        channel.recv(ready.data(), 1);
         channel.resetStats();
 
         Timer online("[ client ] ddh online", BLUE);
@@ -44,6 +47,9 @@ int main(int argc, char *argv[]) {
 
         std::cout << "[  both  ] online comm (bytes)\t: ";
         std::cout << channel.getTotalDataSent() + channel.getTotalDataRecv() << std::endl;
+
+        channel.close();
+        session.stop();
 
         if (params.cuckoo_size == 1) {
             write_dataset(hashed, CLIENT_ONLINE_OUTPUT);
@@ -85,6 +91,9 @@ int main(int argc, char *argv[]) {
         Timer online("[ server ] ddh online", RED);
         server.online(channel);
         online.stop();
+
+        channel.close();
+        session.stop();
 
         if (params.cuckoo_size == 1) {
             auto [ bucket_size, database ] = pir_input[0];

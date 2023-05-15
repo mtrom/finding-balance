@@ -43,17 +43,20 @@ namespace unbalanced_psi {
         // size of each bucket in each hashtable
         u64 hashtable_pad;
 
+        // number of threads to run at once
+        int threads;
+
         PSIParams(const PSIParams&) = default;
 
         // when not using a cuckoo table
-        PSIParams(u64 hsize, u64 hpad) :
+        PSIParams(u64 hsize, u64 hpad, int th) :
             cuckoo_size(1), cuckoo_pad(0), cuckoo_hashes(0),
-            hashtable_size(hsize), hashtable_pad(hpad) { }
+            hashtable_size(hsize), hashtable_pad(hpad), threads(th) { }
 
         // when using a cuckoo table
-        PSIParams(u64 csize, u64 cpad, u64 chashes, u64 hsize, u64 hpad) :
+        PSIParams(u64 csize, u64 cpad, u64 chashes, u64 hsize, u64 hpad, int th) :
             cuckoo_size(csize), cuckoo_pad(cpad), cuckoo_hashes(chashes),
-            hashtable_size(hsize), hashtable_pad(hpad) { }
+            hashtable_size(hsize), hashtable_pad(hpad), threads(th) { }
 
         // if the hashtable padding is 0 then each bucket will be padded
         //  to the size of the bucket with the most collisions
@@ -89,6 +92,7 @@ namespace unbalanced_psi {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) { throw std::runtime_error("cannot open " + filename); }
         file.write((const char*) dataset.data(), dataset.size() * sizeof(T));
+        file.close();
     }
 
     /**
@@ -102,6 +106,7 @@ namespace unbalanced_psi {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) { throw std::runtime_error("cannot open " + filename); }
         file.write((const char*) dataset, size * sizeof(T));
+        file.close();
     }
 
     /**

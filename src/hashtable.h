@@ -11,10 +11,13 @@ namespace unbalanced_psi {
         vector<vector<Point>> table;
 
         // number of elements in hashtable, including padding
-        u64 size;
+        std::atomic<u64> size;
 
         // size of each bucket after padding
         u64 bucket_size;
+
+        // size of largest bucket
+        u64 max_bucket;
 
         /**
          * setup hashtable with given number of buckets of max size
@@ -54,9 +57,14 @@ namespace unbalanced_psi {
         void pad();
 
         /**
+         * pad all buckets with multiple threads
+         */
+        void pad(int threads);
+
+        /**
          * pad buckets from min_bucket to max_bucket
          */
-        void pad(u64 min_bucket, u64 max_bucket);
+        void partial_pad(u64 min_bucket, u64 max_bucket);
 
         /**
          * permute elements in each bucket
@@ -75,11 +83,6 @@ namespace unbalanced_psi {
          * number of buckets in the table
          */
         u64 buckets();
-
-        /**
-         * size of the bucket with the most elements
-         */
-        int max_bucket();
 
         /**
          * write contents of hash table to log for debugging

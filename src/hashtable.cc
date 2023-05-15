@@ -1,16 +1,19 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <future>
 #include <ostream>
 #include <random>
+
+#include <apsi/thread_pool_mgr.h>
 
 #include "hashtable.h"
 #include "utils.h"
 
 namespace unbalanced_psi {
 
-
-    Hashtable::Hashtable(u64 buckets, u64 b_size) : size(0), bucket_size(b_size) {
+    Hashtable::Hashtable(u64 buckets, u64 b_size) :
+        size(0), bucket_size(b_size), max_bucket(b_size) {
         resize(buckets, bucket_size);
     }
 
@@ -43,6 +46,8 @@ namespace unbalanced_psi {
         table[index].push_back(encrypted);
         size++;
 
+        if (table[index].size() > max_bucket) { max_bucket = table[index].size(); }
+
         if (table[index].size() > bucket_size && bucket_size != 0) {
             throw std::overflow_error("more than bucket_size collisions");
         }
@@ -53,37 +58,53 @@ namespace unbalanced_psi {
         table[index].push_back(encrypted);
         size++;
 
+        if (table[index].size() > max_bucket) { max_bucket = table[index].size(); }
+
         if (table[index].size() > bucket_size && bucket_size != 0) {
             throw std::overflow_error("more than bucket_size collisions");
         }
     }
 
-    void Hashtable::pad(u64 min, u64 max) {
-        auto before = size;
-
+    void Hashtable::partial_pad(u64 min, u64 max) {
         block seed(PADDING_SEED);
         PRNG prng(seed);
 
         u64 pad_to = bucket_size;
 
         // if no bucket size is given, use the bucket with the most collisions
-        if (bucket_size == 0) {
-            pad_to = max_bucket();
-        }
+        if (bucket_size == 0) { pad_to = max_bucket; }
 
-        for (u64 i = min; i < max; i++) {
+        for (u64 i = min; i < max && i < table.size(); i++) {
             while (table[i].size() < pad_to) {
                 auto random_element = hash_to_group_element(prng.get<INPUT_TYPE>());
                 table[i].push_back(random_element);
                 size++;
             }
         }
-
-        std::clog << "[ hash ] added " << size - before << " mock elements to pad" << std::endl;
     }
 
     void Hashtable::pad() {
-        pad(0, table.size());
+        partial_pad(0, table.size());
+    }
+
+    void Hashtable::pad(int threads) {
+        if (threads == 1) { return pad(); }
+        vector<std::future<void>> futures(threads);
+
+        apsi::ThreadPoolMgr tpm;
+
+        // each thread takes on this many buckets
+        //  basically ceil(table.size() / threads)
+        u64 buckets = table.size() / threads + (table.size() % threads != 0);
+        for (u64 i = 0; i < threads; i++) {
+            futures[i] = tpm.thread_pool().enqueue(
+                &Hashtable::partial_pad, this, i * buckets, (i + 1) * buckets
+            );
+        }
+
+        for (auto i = 0; i < threads; i++) {
+            futures[i].get();
+        }
     }
 
     void Hashtable::shuffle() {
@@ -109,14 +130,6 @@ namespace unbalanced_psi {
 
     u64 Hashtable::buckets() {
         return table.size();
-    }
-
-    int Hashtable::max_bucket() {
-        int collisions = 0;
-        for (vector<Point> bucket : table) {
-            if (collisions < bucket.size()) { collisions = bucket.size(); }
-        }
-        return collisions;
     }
 
     void Hashtable::log() {
