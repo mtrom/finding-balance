@@ -1,11 +1,4 @@
-#include <algorithm>
-#include <cmath>
-#include <fstream>
-#include <future>
-#include <ostream>
-#include <random>
-
-#include <apsi/thread_pool_mgr.h>
+#include "../CTPL/ctpl.h"
 
 #include "hashtable.h"
 #include "utils.h"
@@ -91,15 +84,15 @@ namespace unbalanced_psi {
         if (threads == 1) { return pad(); }
         vector<std::future<void>> futures(threads);
 
-        apsi::ThreadPoolMgr tpm;
+        ctpl::thread_pool tpool(threads);
 
         // each thread takes on this many buckets
         //  basically ceil(table.size() / threads)
         u64 buckets = table.size() / threads + (table.size() % threads != 0);
         for (u64 i = 0; i < threads; i++) {
-            futures[i] = tpm.thread_pool().enqueue(
-                &Hashtable::partial_pad, this, i * buckets, (i + 1) * buckets
-            );
+            futures[i] = tpool.push([this, i, buckets](int) {
+                return this->partial_pad(i * buckets, (i + 1) * buckets);
+            });
         }
 
         for (auto i = 0; i < threads; i++) {

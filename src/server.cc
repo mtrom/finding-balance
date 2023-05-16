@@ -1,6 +1,6 @@
 #include <cmath>
 
-#include "apsi/thread_pool_mgr.h"
+#include "../CTPL/ctpl.h"
 
 #include "server.h"
 
@@ -52,8 +52,7 @@ namespace unbalanced_psi {
 
     OFFLINE_TUPLE Server::offline(int threads) {
 
-        apsi::ThreadPoolMgr tpm;
-        tpm.SetThreadCount(threads);
+        ctpl::thread_pool tpool(threads);
         vector<std::future<vector<Point>>> futures(threads);
 
         // encrypt elements in seperate threads
@@ -61,9 +60,9 @@ namespace unbalanced_psi {
         for (auto i = 0; i < threads; i++) {
             INPUT_TYPE* elements = dataset.data() + (i * batch);
             int size = i + 1 < threads ? batch : dataset.size() - (i * batch);
-            futures[i] = tpm.thread_pool().enqueue(
-                &Server::encrypt, this, elements, size
-            );
+            futures[i] = tpool.push([this, elements, size](int) {
+                return this->encrypt(elements, size);
+            });
         }
 
         Hashtable hashtable(params.hashtable_size, params.hashtable_pad);
@@ -110,14 +109,14 @@ namespace unbalanced_psi {
         cuckoo.insert_all(dataset);
         cuckoo.pad(params.cuckoo_pad);
 
-        apsi::ThreadPoolMgr tpm;
-        tpm.SetThreadCount(threads);
+        ctpl::thread_pool tpool(threads);
         vector<std::future<OFFLINE_TUPLE>> futures(params.cuckoo_size);
 
         for (auto i = 0; i < params.cuckoo_size; i++) {
-            futures[i] = tpm.thread_pool().enqueue(
-                &Server::get_offline_output, this, &cuckoo.table[i]
-            );
+            auto bucket = &cuckoo.table[i];
+            futures[i] = tpool.push([this, bucket](int) {
+                return this->get_offline_output(bucket);
+            });
         }
 
         vector<OFFLINE_TUPLE> output(params.cuckoo_size);
