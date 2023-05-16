@@ -8,6 +8,7 @@ import (
     "log"
     "net"
     "os"
+    "runtime"
 )
 
 const (
@@ -36,10 +37,11 @@ func main() {
     bucketN       := flag.Int64("bucket-n", -1, "total number of buckets in server's hash table")
     bucketSize    := flag.Int64("bucket-size", -1, "size of each bucket in server's hash table")
     bucketsPerCol := flag.Int64("buckets-per-col", -1, "number of buckets in a col of the database")
+    threads       := flag.Uint("threads", 1, "number of threads to run at once")
 
     cuckooN       := flag.Int64("cuckoo-n", -1, "total number of buckets in server's hash table")
 
-    //client-only flag
+    // client-only flag
     expected := flag.Int64("expected", -1, "expected size of intersection")
 
     // server-only flag
@@ -55,7 +57,11 @@ func main() {
         BucketN: uint64(*bucketN),
         BucketSize: uint64(*bucketSize),
         BucketsPerCol: uint64(*bucketsPerCol),
+        Threads: *threads,
     }
+
+    // limit the number of threads
+    runtime.GOMAXPROCS(int(*threads))
 
     if *client {
         if *expected == -1 { fmt.Println("need --expected argument"); os.Exit(1) }
@@ -93,16 +99,27 @@ func main() {
         timer.End()
 
         timer = StartTimer("[ client ] pir online", BLUE)
-        results := make([][]byte, *cuckooN)
+        indices := make([]uint64, *cuckooN)
         for i, query := range queries {
             // translate the hash value into the column by dividing by the number
             // of buckets per column
-            translated := query[0] / psiParams.BucketsPerCol
+            indices[i] = query[0] / psiParams.BucketsPerCol
+        }
 
-            results[i] = RunClientOnline(
+        var results [][]byte
+        if psiParams.Threads == 1 {
+            results = RunClientOnline(
                 &psiParams,
-                &states[i],
-                translated,
+                states,
+                indices,
+                server,
+                false,
+            )
+        } else {
+            results = RunClientOnlineMultiThread(
+                &psiParams,
+                states,
+                indices,
                 server,
                 false,
             )
@@ -140,7 +157,6 @@ func main() {
         defer client.Close()
 
         datasets := make([][]uint64, *cuckooN)
-        // dynamicBucketSize := (psiParams.BucketSize == 0)
         for i := int64(0); i < *cuckooN; i++ {
             // read in encrypted database from file
             metadata, values := ReadDatabase[uint64](
@@ -164,22 +180,38 @@ func main() {
             datasets[i] = values
         }
 
+
         timer := StartTimer("[ server ] pir offline", RED)
         states := make([]ServerState, *cuckooN)
-        offlines := make([][]byte, *cuckooN)
-        for i, dataset := range datasets {
-            states[i], offlines[i] = RunServerOffline(&psiParams, dataset)
+
+        if psiParams.Threads == 1 {
+            payloads := make([][]byte, *cuckooN)
+            for i, dataset := range datasets {
+                result := RunServerOffline(&psiParams, dataset)
+                states[i] = result.state
+                payloads[i] = result.payload
+            }
+            for _, payload := range payloads {
+                WriteOverNetwork(client, payload)
+            }
+        } else {
+            channels := make([]chan ServerOfflineResult, *cuckooN)
+            for i := range datasets {
+                channels[i] = make(chan ServerOfflineResult)
+                go func(i int) {
+                    channels[i] <- RunServerOffline(&psiParams, datasets[i])
+                }(i)
+            }
+            for i, channel := range channels {
+                result := <-channel
+                states[i] = result.state
+                WriteOverNetwork(client, result.payload)
+            }
         }
         timer.End()
 
-        for _, offline := range offlines {
-            WriteOverNetwork(client, offline)
-        }
-
         timer = StartTimer("[ server ] pir online", RED)
-        for _, state := range states {
-            RunServerOnline(&state, client)
-        }
+        RunServerOnline(&psiParams, states, client)
         timer.End()
 
     } else {

@@ -6,6 +6,7 @@ import (
     "fmt"
     "net"
     "time"
+    "sync"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
@@ -15,6 +16,8 @@ const (
     SERVER_DATABASE_PREFIX = "out/"
     SERVER_DATABASE_SUFFIX = "/server.edb"
 )
+
+var mutex sync.Mutex
 
 /**
  * run protocol as the server
@@ -140,17 +143,27 @@ type ServerState struct {
     lweMatrix   State
 }
 
+type ServerOfflineResult struct {
+    state  ServerState
+    payload []byte
+}
+
 func RunServerOffline(
     psiParams *PSIParams,
     values []uint64,
-) (ServerState, []byte) {
+) (ServerOfflineResult) {
 
     // decide protocol parameters and set up database
     protocol, params, ENTRY_BITS := SetupProtocol(psiParams)
     db := CreateDatabase(ENTRY_BITS, params, values)
 
+    // the SimplePIR library has a global prng so the this cannot be parallelized
+    mutex.Lock()
+
     // sample seed for lwe random matrix A
     lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
+
+    mutex.Unlock()
 
     // calculate hint seed
     _, hint := protocol.Setup(db, lweMatrix, *params)
@@ -161,45 +174,70 @@ func RunServerOffline(
     copy(bytes[:], ptr[:])
     offline := append(bytes, MatrixToBytes(hint.Data[0])...)
 
-    results := ServerState{
+    state := ServerState{
         params: params,
         protocol: protocol,
         db: db,
         lweMatrix: lweMatrix,
     }
 
-    return results, offline
+    return ServerOfflineResult{state: state, payload: offline}
 }
 
 func RunServerOnline(
-    state *ServerState,
+    psiParams *PSIParams,
+    states []ServerState,
     client net.Conn,
 ) {
-    // expected size of the query vector
-    queryRows := state.params.M
+    queries := make([]*Matrix, len(states))
+    for i, state := range states {
+        // expected size of the query vector
+        queryRows := state.params.M
 
-	// compensate for this squish artifact
-	if state.params.M % state.db.Info.Squishing != 0 {
-		queryRows += state.db.Info.Squishing - (state.params.M % state.db.Info.Squishing)
-	}
+        // compensate for this squish artifact
+        if state.params.M % state.db.Info.Squishing != 0 {
+            queryRows += state.db.Info.Squishing - (state.params.M % state.db.Info.Squishing)
+        }
 
-    // read in query vector
-    req := ReadOverNetwork(client, queryRows * ELEMENT_SIZE)
-    query := BytesToMatrix(req, queryRows, 1)
+        // read in query vector
+        req := ReadOverNetwork(client, queryRows * ELEMENT_SIZE)
+        queries[i] = BytesToMatrix(req, queryRows, 1)
+    }
 
-    // generate answer and send to client
-    answer := state.protocol.Answer(
-        state.db,
-        MakeMsgSlice(MakeMsg(query)),
-        MakeState(),
-        state.lweMatrix,
-        *state.params,
-    )
-    res := MatrixToBytes(answer.Data[0])
-
-    WriteOverNetwork(client, res)
+    if psiParams.Threads == 1 {
+        for i, state := range states {
+            // generate answer and send to client
+            answer := state.protocol.Answer(
+                state.db,
+                MakeMsgSlice(MakeMsg(queries[i])),
+                MakeState(),
+                state.lweMatrix,
+                *state.params,
+            )
+            res := MatrixToBytes(answer.Data[0])
+            WriteOverNetwork(client, res)
+        }
+    } else {
+        channels := make([]chan []byte, len(states))
+        for i, state := range states {
+            channels[i] = make(chan []byte)
+            go func(i int, state ServerState) {
+                answer := state.protocol.Answer(
+                    state.db,
+                    MakeMsgSlice(MakeMsg(queries[i])),
+                    MakeState(),
+                    state.lweMatrix,
+                    *state.params,
+                )
+                channels[i] <- MatrixToBytes(answer.Data[0])
+            }(i, state)
+        }
+        for _, channel := range channels {
+            res := <-channel
+            WriteOverNetwork(client, res)
+        }
+    }
 }
-
 /**
  * run protocol
  */

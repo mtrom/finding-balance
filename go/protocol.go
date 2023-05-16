@@ -15,6 +15,7 @@ type PSIParams struct {
     BucketN       uint64 // number of buckets in server's hash table
     BucketSize    uint64 // size of each bucket _in group elements_
     BucketsPerCol uint64 // number of buckets in a col of the pir database
+    Threads       uint   // number of threads to run at a time
 }
 
 /**

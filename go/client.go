@@ -225,43 +225,115 @@ func RunClientOffline(
 
 func RunClientOnline(
     psiParams *PSIParams,
-    state *ClientState,
-    index uint64,
+    states []ClientState,
+    indices []uint64,
     server net.Conn,
     already_queried bool,
-) []byte {
-    // generate the query vector and send to server
-    secret, query := state.protocol.Query(
-        index,
-        state.lweMatrix,
-        *state.params,
-        state.dbInfo,
-    )
+) [][]byte {
+    secrets := make([]State, len(indices))
+    queries := make([]Msg, len(indices))
+    requests := make([][]byte, len(indices))
 
-    data := MatrixToBytes(query.Data[0])
-    WriteOverNetwork(server, data)
-
-    // read the query's answer
-    data = ReadOverNetwork(server, state.params.L * ELEMENT_SIZE)
-
-    // if we've already queried this column, don't bother recovering
-    if already_queried {
-        return []byte{};
+    for i, index := range indices {
+        secret, query := states[i].protocol.Query(
+            index,
+            states[i].lweMatrix,
+            *states[i].params,
+            states[i].dbInfo,
+        )
+        secrets[i] = secret
+        queries[i] = query
+        requests[i] = MatrixToBytes(query.Data[0])
     }
 
-    answer := BytesToMatrix(data, state.params.L, 1)
+    for _, req := range requests {
+        WriteOverNetwork(server, req)
+    }
 
-    // reconstruct the data based on the answer
-    column := RecoverColumn(
-        MakeMsg(state.hint),
-        query,
-        MakeMsg(answer),
-        secret,
-        *state.params,
-        state.dbInfo,
-    )
+    responses := make([][]byte, len(queries))
+    for i := range queries {
+        // read the query's answer
+        responses[i] = ReadOverNetwork(server, states[i].params.L * ELEMENT_SIZE)
+    }
 
-    return column
+    cols := make([][]byte, len(responses))
+    for i, response := range responses {
+        // if we've already queried this column, don't bother recovering
+        answer := BytesToMatrix(response, states[i].params.L, 1)
+
+        // reconstruct the data based on the answer
+        cols[i] = RecoverColumn(
+            MakeMsg(states[i].hint),
+            queries[i],
+            MakeMsg(answer),
+            secrets[i],
+            *states[i].params,
+            states[i].dbInfo,
+        )
+    }
+
+    return cols
+}
+
+func RunClientOnlineMultiThread(
+    psiParams *PSIParams,
+    states []ClientState,
+    indices []uint64,
+    server net.Conn,
+    already_queried bool,
+) [][]byte {
+    secrets := make([]State, len(indices))
+    queries := make([]Msg, len(indices))
+
+    channels := make([]chan []byte, len(states))
+    for i, index := range indices {
+        channels[i] = make(chan []byte)
+        go func(i int, index uint64, state ClientState) {
+            secret, query := state.protocol.Query(
+                index,
+                state.lweMatrix,
+                *state.params,
+                state.dbInfo,
+            )
+            secrets[i] = secret
+            queries[i] = query
+            channels[i] <- MatrixToBytes(query.Data[0])
+        }(i, index, states[i])
+    }
+    for _, channel := range channels {
+        req := <-channel
+        WriteOverNetwork(server, req)
+    }
+
+    for i, state := range states {
+        go func(i int, state ClientState) {
+            response := <-channels[i]
+            // if we've already queried this column, don't bother recovering
+            answer := BytesToMatrix(response, state.params.L, 1)
+
+            // reconstruct the data based on the answer
+            channels[i] <- RecoverColumn(
+                MakeMsg(state.hint),
+                queries[i],
+                MakeMsg(answer),
+                secrets[i],
+                *state.params,
+                state.dbInfo,
+            )
+        }(i, state)
+    }
+
+    for i := range queries {
+        // read the query's answer
+        channels[i] <- ReadOverNetwork(server, states[i].params.L * ELEMENT_SIZE)
+    }
+
+    cols := make([][]byte, len(queries))
+    for i := range cols {
+        cols[i] = <-channels[i]
+    }
+
+    return cols
 }
 
 /**
