@@ -33,8 +33,13 @@ func NewConfig(filename string) (*Config) {
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if len(line) == 0 || line[0] == ';' {
-			continue
+			continue // empty lines or comments
 		} else if line[0] == '[' && line[len(line) - 1] == ']' {
+            // if the previous section is marked as "skip" then erase it
+            if _, ok := cfg.Parameters[section]["skip"]; ok {
+                delete(cfg.Parameters, section)
+                cfg.Sections =  cfg.Sections[:len(cfg.Sections) - 1]
+            }
 			section = line[1 : len(line) - 1]
 			cfg.Sections = append(cfg.Sections, section)
 		} else {
@@ -229,7 +234,12 @@ func RunBenchmark(
 }
 
 func main() {
-    cfg := NewConfig("params/10.ini")
+
+    if len(os.Args) < 2 {
+        fmt.Printf("%sno parameter file specified%s\n", RED, RESET)
+        os.Exit(1)
+    }
+    cfg := NewConfig(os.Args[1])
 
     RunBenchmark(
         cfg,
@@ -251,7 +261,7 @@ func main() {
                     <-channel
                 }
             }
-        }
+        },
     )
 
     RunBenchmark(
@@ -280,6 +290,6 @@ func main() {
                     WriteOverNetwork(conn, result.payload)
                 }
             }
-        }
+        },
     )
 }

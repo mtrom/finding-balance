@@ -66,11 +66,12 @@ echo -n -e $(cat test.edb.desc | tr -d '\n') > go/test.edb
 ## AWS Commands
 
 ```bash
-scp deploy.sh -i aws-key.pem ec2-user@<ip-address>
-ssh -i aws-key.pem ec2-user@<ip-address>
+AWS=<ip address>
+scp -i aws-key.pem deploy.sh ec2-user@$AWS
+ssh -i aws-key.pem ec2-user@$AWS
 ssh-keygen -t ed25519 -C "mtromanhauser@gmail.com" # & add public key to github
 sudo yum install git -y
-git clone git@github.com:mtrom/ddh-unbalanced-psi.git
+git clone git@github.com:mtrom/ddh-unbalanced-psi.git --recursive
 cp ddh-unbalanced-psi/deploy.sh ./
 ./deploy.sh
 ```

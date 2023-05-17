@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "defines.h"
 #include "hashtable.h"
 #include "utils.h"

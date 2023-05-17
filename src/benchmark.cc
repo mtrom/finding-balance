@@ -29,6 +29,12 @@ namespace unbalanced_psi {
                 if (line.empty() || line[0] == ';') {
                     continue; // empty lines or comments
                 } else if (line[0] == '[' and line[line.length() - 1] == ']') {
+                    // if the previous section is marked as "skip" then erase it
+                    if (parameters[section].count("skip")) {
+                        auto entry = parameters.find(section);
+                        parameters.erase(entry);
+                        sections.pop_back();
+                    }
                     section = line.substr(1, line.length() - 2);
                     sections.push_back(section);
                 } else if (split != std::string::npos) {
@@ -78,8 +84,12 @@ void print_stat(string name, vector<float> stats, int i) {
 }
 
 int main(int argc, char *argv[]) {
-    Config config("params/10.ini");
+    if (argc < 2) {
+        std::cout << RED << "no parameter file specified" << RESET << std::endl;
+        return 1;
+    }
 
+    Config config(argv[1]);
 
     vector<float> averages(config.sections.size());
     vector<float> minimums(config.sections.size());
@@ -87,6 +97,7 @@ int main(int argc, char *argv[]) {
     vector<float> stddevs(config.sections.size());
     for (auto i = 0; i < config.sections.size(); i++) {
         auto section = config.sections[i];
+
         auto dataset = generate_dataset(1 << config.get(section, "server_log"));
         PSIParams params(
             config.get(section, "cuckoo_n"),

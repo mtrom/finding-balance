@@ -24,4 +24,8 @@ sudo chown $(whoami) /usr/local/include/
 
 (cd cryptoTools; python3 build.py --install --relic --boost)
 
+git clone git@github.com:microsoft/vcpkg.git
+./vcpkg/bootstrap-vcpkg.sh
+./vcpkg/vcpkg install apsi
+
 set +e
