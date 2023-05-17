@@ -108,7 +108,7 @@ func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
             chunk = make([]byte, CHUNK_SIZE)
         }
         n, err := conn.Read(chunk)
-        if err != nil { panic(err) }
+        if err != nil { return []byte{} } // panic(err) }
         data = append(data, chunk[:n]...)
         i += uint64(n)
     }

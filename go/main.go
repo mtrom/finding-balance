@@ -11,11 +11,6 @@ import (
     "runtime"
 )
 
-const (
-    SERVER_HOST = "localhost:1122"
-    SERVER_TYPE = "tcp"
-)
-
 func RunBoth(dbFn, queriesFn, outputFn string) {
     protocol, params, db, bucketSize := SetupProtocolAndDB(dbFn)
 
@@ -54,6 +49,7 @@ func main() {
     if *bucketsPerCol == -1 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
 
     psiParams := PSIParams{
+        CuckooN: uint64(*cuckooN),
         BucketN: uint64(*bucketN),
         BucketSize: uint64(*bucketSize),
         BucketsPerCol: uint64(*bucketsPerCol),
@@ -156,30 +152,7 @@ func main() {
         if err != nil { panic(err) }
         defer client.Close()
 
-        datasets := make([][]uint64, *cuckooN)
-        for i := int64(0); i < *cuckooN; i++ {
-            // read in encrypted database from file
-            metadata, values := ReadDatabase[uint64](
-                fmt.Sprintf("%s%d%s", SERVER_DATABASE_PREFIX, i, SERVER_DATABASE_SUFFIX),
-                "bucketSize",
-            )
-
-            if psiParams.BucketSize == 0 {
-                psiParams.BucketSize = metadata["bucketSize"]
-            } else if psiParams.BucketSize != metadata["bucketSize"] {
-                panic(fmt.Sprintf(
-                    "bucket size inconsistent between file and params: %d vs. %d",
-                    metadata["bucketSize"], psiParams.BucketSize,
-                ))
-            }
-
-            if uint64(len(values)) != psiParams.DBBytes() {
-                panic("database size inconsistent between file and params")
-            }
-
-            datasets[i] = values
-        }
-
+        datasets := ReadServerInputs(*cuckooN, &psiParams)
 
         timer := StartTimer("[ server ] pir offline", RED)
         states := make([]ServerState, *cuckooN)

@@ -4,7 +4,7 @@ set -e
 if [ -z ${CUCKOO_N+x} ]; then
     ./bin/datagen --server-log $1 --client-log $2 --overlap $3
     BUCKET_N=$((2**$1))
-    BUCKET_SIZE=0
+    BUCKET_SIZE=10
     BUCKETS_PER_COL=2
     QUERIES=$((2**$2))
 

@@ -12,6 +12,7 @@ import (
  * parameters of the greater psi protocol
  */
 type PSIParams struct {
+    CuckooN       uint64 // number of buckets in cuckoo hashing table
     BucketN       uint64 // number of buckets in server's hash table
     BucketSize    uint64 // size of each bucket _in group elements_
     BucketsPerCol uint64 // number of buckets in a col of the pir database

@@ -39,6 +39,17 @@ add_executable(oprf
 target_link_libraries(oprf oc::cryptoTools)
 target_link_libraries(oprf APSI::apsi)
 
+# benchmark timings
+add_executable(bm_ddh
+    ${PROJECT_SOURCE_DIR}/src/benchmark.cc
+    ${PROJECT_SOURCE_DIR}/src/server.cc
+    ${PROJECT_SOURCE_DIR}/src/cuckoo.cc
+    ${PROJECT_SOURCE_DIR}/src/hashtable.cc
+    ${PROJECT_SOURCE_DIR}/src/utils.cc
+)
+target_link_libraries(bm_ddh oc::cryptoTools)
+target_link_libraries(bm_ddh APSI::apsi)
+
 # test c++ library
 add_executable(tests
     ${PROJECT_SOURCE_DIR}/src/tests/test_all.cc

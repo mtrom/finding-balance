@@ -1,6 +1,8 @@
 package main
 
 import (
+    "os"
+
     . "github.com/ahenzinger/simplepir/pir"
 )
 
@@ -37,7 +39,11 @@ func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uin
  * @params <values> values to populate database
  */
 func CreateDatabase(entryBits uint64, params *Params, values []uint64) *Database {
+    // prevents SetupDB from printing out 'Total packed DB size'
+    tmp := os.Stdout
+    os.Stdout = nil
 	db := SetupDB(uint64(len(values)), entryBits, params)
+    os.Stdout = tmp
 	db.Data = MatrixZeros(params.L, params.M)
 
     // when multiple entries go into each Z_p elements

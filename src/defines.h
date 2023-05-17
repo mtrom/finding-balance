@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <tuple>
 #include <future>
 
@@ -36,6 +37,8 @@ namespace unbalanced_psi {
     using std::tuple;
     using std::vector;
     using std::future;
+    using std::string;
+    using std::map;
 
     // datatypes from osuCrypto
     using i64 = osuCrypto::i64;
