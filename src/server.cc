@@ -14,14 +14,7 @@ namespace unbalanced_psi {
         dataset(read_dataset<INPUT_TYPE>(filename)), params(p) { }
 
     vector<OFFLINE_TUPLE> Server::offline() {
-#if _USE_FOUR_Q_
         Point::MakeRandomNonzeroScalar(key);
-#else
-        // randomly sample secret key
-        block seed(SERVER_SEED);
-        PRNG prng(seed);
-        key.randomize(prng);
-#endif
 
         if (params.cuckoo_size > 1 && params.threads > 1) {
             return offline(params.threads, params.cuckoo_size);
@@ -148,11 +141,7 @@ namespace unbalanced_psi {
         vector<Point> encrypted(size);
         for (auto i = 0; i < size; i++) {
             encrypted[i] = hash_to_group_element(*(elements + i)); // h(x)
-#if _USE_FOUR_Q_
             encrypted[i].scalar_multiply(key, true);             // h(x)^a
-#else
-            encrypted[i] = encrypted[i] * key;                          // h(x)^a
-#endif
         }
         return encrypted;
     }
@@ -166,7 +155,6 @@ namespace unbalanced_psi {
 
         // encrypt each point under the server's key
         Point point;
-#if _USE_FOUR_Q_
         for (auto i = 0; i < request.size() / Point::save_size; i++) {
             point.load(Point::point_save_span_const_type{
                 request.data() + (i * Point::save_size),
@@ -178,14 +166,6 @@ namespace unbalanced_psi {
                 Point::save_size
             });
         }
-#else
-        for (auto i = 0; i < request.size() / Point::size; i++) {
-            point.fromBytes(request.data() + (i * Point::size));
-            point = point * key;
-            point.toBytes(response.data() + (i * Point::size));
-        }
-#endif
-
         channel.send(response);
     }
 

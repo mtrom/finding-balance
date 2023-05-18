@@ -9,7 +9,6 @@
 namespace unbalanced_psi {
 
 // fourq doesn't have direct Point comparison so comparing hex values
-#if _USE_FOUR_Q_
 #define POINT_VECTORS_NOT_EQUAL(x, y) compare_point_vectors(x, y)
 
     bool compare_point_vectors(vector<Point> actual, vector<Point> expected) {
@@ -24,10 +23,6 @@ namespace unbalanced_psi {
 
         return false;
     }
-#else
-#define POINT_VECTORS_NOT_EQUAL(x, y) (x != y)
-#endif
-
 
     void test_hash_repeat() {
 
@@ -57,9 +52,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_insert_one() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         INPUT_TYPE element = 42;
         u64 TABLE_SIZE = 1024;
         u64 MAX_BUCKET = 10;
@@ -80,9 +72,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_insert_many() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
         u64 TARGET_HASH = 5;
@@ -122,9 +111,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_insert_one_point() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         INPUT_TYPE element = 42;
         u64 TABLE_SIZE = 1024;
         u64 MAX_BUCKET = 10;
@@ -143,9 +129,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_insert_many_points() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
         u64 TARGET_HASH = 5;
@@ -195,9 +178,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_pad_one() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 4;
 
@@ -216,9 +196,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_pad_many() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
 
@@ -254,9 +231,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_pad_one_threads() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 4;
         u8 THREADS = 8;
@@ -276,9 +250,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_pad_many_threads() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 16;
         u64 MAX_BUCKET = 10;
         u8 THREADS = 8;
@@ -300,9 +271,6 @@ namespace unbalanced_psi {
     }
 
     void test_hashtable_shuffle() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         u64 TABLE_SIZE = 1;
         u64 MAX_BUCKET = 1000;
 

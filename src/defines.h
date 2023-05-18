@@ -21,15 +21,6 @@
 #define MAX_THREADS 8
 #define IOS_THREADS 8
 
-#define _USE_FOUR_Q_ true
-
-
-#if _USE_FOUR_Q_
-#define ENCRYPT(element, key) element.scalar_multiply(key, true)
-#else
-#define ENCRYPT(element, key) element * key
-#endif
-
 namespace unbalanced_psi {
 
     // datatypes from std
@@ -55,16 +46,10 @@ namespace unbalanced_psi {
     using PRNG = osuCrypto::PRNG;
     using RandomOracle = osuCrypto::RandomOracle;
 
-#if _USE_FOUR_Q_
+    // group element types
     using HashedItem = apsi::HashedItem;
     using Point      = apsi::oprf::ECPoint;
     using Number     = apsi::oprf::ECPoint::scalar_type;
-#else
-    // for ddh
-    using Curve  = osuCrypto::REllipticCurve;
-    using Point  = osuCrypto::REccPoint;
-    using Number = osuCrypto::REccNumber;
-#endif
 
     // networking
     using IOService   = osuCrypto::IOService;

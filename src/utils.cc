@@ -35,7 +35,6 @@ namespace unbalanced_psi {
         return datasets;
     }
 
-#if _USE_FOUR_Q_
     Point hash_to_group_element(INPUT_TYPE input) {
         Point element(gsl::span<const u8>{
             static_cast<const u8*>(static_cast<void*>(&input)),
@@ -56,37 +55,6 @@ namespace unbalanced_psi {
         return to_hex(bytes.data(), bytes.size());
 
     }
-#else
-    Point hash_to_group_element(INPUT_TYPE input) {
-        RandomOracle oracle(HASH_1_SIZE);
-
-        oracle.Reset();
-        oracle.Update(input);
-
-        vector<u8> hashed(HASH_1_SIZE);
-        oracle.Final(hashed.data());
-
-        Point point;
-        point.fromHash(hashed.data(), HASH_1_SIZE);
-        return point;
-    }
-
-    void hash_group_element(const Point& element, int length, u8* dest) {
-        RandomOracle oracle(length);
-        vector<u8> bytes(Point::size);
-        element.toBytes(bytes.data());
-
-        oracle.Reset();
-        oracle.Update(bytes.data(), bytes.size());
-        oracle.Final(dest);
-    }
-
-    std::string to_hex(const Point& point) {
-        vector<u8> bytes(Point::size);
-        point.toBytes(bytes.data());
-        return to_hex(bytes.data(), bytes.size());
-    }
-#endif
 
     std::string to_hex(u8 *bytes, u64 size) {
         static const char* digits = "0123456789ABCDEF";

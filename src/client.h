@@ -32,10 +32,6 @@ namespace unbalanced_psi {
         // cuckoo table
         std::unordered_map<INPUT_TYPE, int> cuckoo_indexes;
 
-#if !_USE_FOUR_Q_
-        // initializes the group element operations
-        Curve curve;
-#endif
         // secret key
         Number key;
 

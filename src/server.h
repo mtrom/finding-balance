@@ -26,10 +26,6 @@ namespace unbalanced_psi {
         // server's dataset
         vector<INPUT_TYPE> dataset;
 
-#if !_USE_FOUR_Q_
-        // initializes the group element operations
-        Curve curve;
-#endif
         // secret key
         Number key;
 

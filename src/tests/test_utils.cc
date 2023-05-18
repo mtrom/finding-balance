@@ -69,9 +69,6 @@ namespace unbalanced_psi {
     }
 
     void test_hash_to_group_element_same() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         INPUT_TYPE a_input(1234);
         INPUT_TYPE b_input(1234);
 
@@ -91,9 +88,6 @@ namespace unbalanced_psi {
     }
 
     void test_hash_to_group_element_diff() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         INPUT_TYPE a_input(1234);
         INPUT_TYPE b_input(5678);
 
@@ -113,9 +107,6 @@ namespace unbalanced_psi {
     }
 
     void test_hash_group_element_same() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         INPUT_TYPE a_input(1234);
         INPUT_TYPE b_input(1234);
 
@@ -138,9 +129,6 @@ namespace unbalanced_psi {
     }
 
     void test_hash_group_element_diff() {
-#if !_USE_FOUR_Q_
-        Curve c;
-#endif
         INPUT_TYPE a_input(1234);
         INPUT_TYPE b_input(5678);
 
