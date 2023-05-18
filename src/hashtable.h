@@ -7,47 +7,27 @@ namespace unbalanced_psi {
 
         public:
 
-        // vector of buckets which are collections of group elements
-        vector<vector<Point>> table;
-
-        // number of elements in hashtable, including padding
-        std::atomic<u64> size;
-
-        // size of each bucket after padding
-        u64 bucket_size;
+        // vector of buckets which are collections of hashed group elements
+        vector<vector<u8>> table;
 
         // size of largest bucket
-        u64 max_bucket;
+        u64 width;
 
         /**
-         * setup hashtable with given number of buckets of max size
+         * setup hashtable with given number of buckets
          */
-        Hashtable(u64 buckets, u64 bucket_size);
-
-        /**
-         * clear contents of hashtable and resize to new parameters
-         */
-        void resize(u64 buckets, u64 bucket_size);
-
-        /**
-         * hash input element to a bucket
-         */
-        static u64 hash(INPUT_TYPE element, u64 table_size);
+        Hashtable(u64 buckets);
 
         /**
          * hash encrypted input element to a bucket
          */
-        static u64 hash(const Point& encrypted, u64 table_size);
-
-        /**
-         * insert encrypted into a bucket given by element's hash
-         */
-        void insert(INPUT_TYPE element, const Point& encrypted);
+        static u64 hash(const vector<u8>& entry, u64 table_size);
+        static u64 hash(const u8* entry, u64 table_size);
 
         /**
          * insert encrypted into a bucket given by it's own hash
          */
-        void insert(const Point& encrypted);
+        void insert(const vector<u8>& entry);
 
         /**
          * pad all buckets with random elements to be bucket_size, or if
@@ -57,32 +37,14 @@ namespace unbalanced_psi {
         void pad();
 
         /**
-         * pad all buckets with multiple threads
-         */
-        void pad(int threads);
-
-        /**
-         * pad buckets from min_bucket to max_bucket
-         */
-        void partial_pad(u64 min_bucket, u64 max_bucket);
-
-        /**
-         * permute elements in each bucket
-         */
-        void shuffle();
-
-        /**
-         * apply a hash to each bucket and return the result
-         *
-         * @params <hash_length> number of bytes each element should be hashed to
-         * @return byte vector of hashed elements ordered by bucket
-         */
-        vector<u8> apply_hash(int hash_length);
-
-        /**
          * number of buckets in the table
          */
         u64 buckets();
+
+        /**
+         * write hashtable to file
+         */
+        void to_file(string filename);
 
         /**
          * write contents of hash table to log for debugging

@@ -57,8 +57,6 @@ add_executable(tests
     ${PROJECT_SOURCE_DIR}/src/tests/test_hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/tests/test_utils.cc
     ${PROJECT_SOURCE_DIR}/src/cuckoo.cc
-    ${PROJECT_SOURCE_DIR}/src/client.cc
-    ${PROJECT_SOURCE_DIR}/src/server.cc
     ${PROJECT_SOURCE_DIR}/src/hashtable.cc
     ${PROJECT_SOURCE_DIR}/src/utils.cc
 )

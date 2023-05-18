@@ -40,27 +40,20 @@ namespace unbalanced_psi {
         // number of buckets in each hashtable
         u64 hashtable_size;
 
-        // size of each bucket in each hashtable
-        u64 hashtable_pad;
-
         // number of threads to run at once
         int threads;
 
         PSIParams(const PSIParams&) = default;
 
         // when not using a cuckoo table
-        PSIParams(u64 hsize, u64 hpad, int th) :
+        PSIParams(u64 hsize, int th) :
             cuckoo_size(1), cuckoo_pad(0), cuckoo_hashes(0),
-            hashtable_size(hsize), hashtable_pad(hpad), threads(th) { }
+            hashtable_size(hsize), threads(th) { }
 
         // when using a cuckoo table
-        PSIParams(u64 csize, u64 cpad, u64 chashes, u64 hsize, u64 hpad, int th) :
+        PSIParams(u64 csize, u64 cpad, u64 chashes, u64 hsize, int th) :
             cuckoo_size(csize), cuckoo_pad(cpad), cuckoo_hashes(chashes),
-            hashtable_size(hsize), hashtable_pad(hpad), threads(th) { }
-
-        // if the hashtable padding is 0 then each bucket will be padded
-        //  to the size of the bucket with the most collisions
-        bool dynamic_padding() { return hashtable_pad == 0; }
+            hashtable_size(hsize), threads(th) { }
     };
 
     /**

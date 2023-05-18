@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
     "os"
 
     . "github.com/ahenzinger/simplepir/pir"
@@ -18,7 +19,7 @@ func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uin
 
     ptElems, ptPerEntry, _ := Num_DB_entries(psiParams.DBBytes(), entryBits, ptMod)
 
-    rows := psiParams.BucketsPerCol * psiParams.BucketBytes() * ptPerEntry
+    rows := psiParams.BucketsPerCol * psiParams.BucketSize * ptPerEntry
     cols := psiParams.DBBytes() * ptPerEntry / rows
 
     // TODO: support other entryBits

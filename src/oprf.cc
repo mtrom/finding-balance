@@ -21,7 +21,6 @@ int main(int argc, char *argv[]) {
         parser.get<u64>("-cuckoo-pad"),
         parser.get<u64>("-cuckoo-hashes"),
         parser.get<u64>("-hashtable-n"),
-        parser.getOr<u64>("-hashtable-pad", 0),
         parser.getOr<int>("-threads", 1)
     );
 
@@ -81,7 +80,7 @@ int main(int argc, char *argv[]) {
         channel.waitForConnection();
 
         Timer timer("[ server ] ddh offline", RED);
-        auto pir_input = server.offline();
+        auto hashtables = server.offline();
         timer.stop();
 
         vector<u8> ready { 1 };
@@ -96,27 +95,12 @@ int main(int argc, char *argv[]) {
         session.stop();
 
         if (params.cuckoo_size == 1) {
-            auto [ bucket_size, database ] = pir_input[0];
-
-            // prepend the database with the bucket_size as bytes
-            vector<u8> output(sizeof(bucket_size));
-            std::memcpy(output.data(), &bucket_size, sizeof(bucket_size));
-            database.insert(database.begin(), output.begin(), output.end());
-
-            write_dataset<u8>(database, SERVER_OFFLINE_OUTPUT);
+            hashtables[0].to_file(SERVER_OFFLINE_OUTPUT);
             return 0;
         }
 
-        for (auto i = 0; i < pir_input.size(); i++) {
-            auto [ bucket_size, database ] = pir_input[i];
-
-            // prepend the database with the bucket_size as bytes
-            vector<u8> output(sizeof(bucket_size));
-            std::memcpy(output.data(), &bucket_size, sizeof(bucket_size));
-            database.insert(database.begin(), output.begin(), output.end());
-
-            write_dataset<u8>(
-                database,
+        for (auto i = 0; i < hashtables.size(); i++) {
+            hashtables[i].to_file(
                 SERVER_OFFLINE_OUTPUT_PREFIX
                 + std::to_string(i)
                 + SERVER_OFFLINE_OUTPUT_SUFFIX

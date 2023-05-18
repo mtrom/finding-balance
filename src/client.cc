@@ -7,6 +7,7 @@
 
 #include "client.h"
 #include "cuckoo.h"
+#include "hashtable.h"
 
 #define EMPTY_CUCKOO_BUCKET 0
 
@@ -68,17 +69,16 @@ namespace unbalanced_psi {
         Point::InvertScalar(key, inverse);
         auto res_index = 0;
         for (auto i = 0; i < encrypted.size(); i++) {
-            // if there's an empty cuckoo bucket it doens't matter what the query / hashes are
+            // if there's an empty cuckoo bucket it doesn't matter what the query / hashes are
             if (!encrypted[i]) { ptr += HASH_3_SIZE; continue; }
             Point point;
-
             point.load(Point::point_save_span_const_type{
                 response.data() + (res_index * Point::save_size),
                 Point::save_size
             }); // h(y)^ab
             point.scalar_multiply(inverse, false);
             hash_group_element(point, HASH_3_SIZE, ptr);          // g(h(y)^a)
-            queries[i] = Hashtable::hash(point, params.hashtable_size);
+            queries[i] = Hashtable::hash(ptr, params.hashtable_size);
 
             ptr += HASH_3_SIZE;
             res_index++;

@@ -21,8 +21,6 @@ namespace unbalanced_psi {
 
     class Server {
 
-        using OFFLINE_TUPLE = tuple<u64, vector<u8>>;
-
         // server's dataset
         vector<INPUT_TYPE> dataset;
 
@@ -55,7 +53,7 @@ namespace unbalanced_psi {
          *         elements in each bucket of the hashtable, and (2) the bytes
          *         to be used as input for SimplePIR
          */
-        vector<OFFLINE_TUPLE> offline();
+        vector<Hashtable> offline();
 
         /**
          * reply to encryption request on client's set
@@ -75,26 +73,26 @@ namespace unbalanced_psi {
         /**
          * run the offline with multiple threads
          */
-        OFFLINE_TUPLE offline(int threads);
+        Hashtable offline(int threads);
 
         /**
          * run the offline with cuckoo hashing on a single thread
          */
-        vector<OFFLINE_TUPLE> offline(u64 cuckoo_size);
+        vector<Hashtable> offline(u64 cuckoo_size);
 
         /**
          * run the offline with cuckoo hashing using multiple threads
          */
-        vector<OFFLINE_TUPLE> offline(int threads, u64 cuckoo_size);
+        vector<Hashtable> offline(int threads, u64 cuckoo_size);
 
         /**
          * hash given input to group elements, encrypt them, and hash them
          */
-        OFFLINE_TUPLE get_offline_output(vector<INPUT_TYPE>* elements);
+        Hashtable get_offline_output(vector<INPUT_TYPE>* elements);
 
         /**
          * hash given input to group elements and encrypt under the secret key
          */
-        vector<Point> encrypt(INPUT_TYPE* elements, int size);
+        vector<vector<u8>> encrypt(INPUT_TYPE* elements, int size);
     };
 }

@@ -2,6 +2,7 @@ package main
 
 import (
     "bytes"
+    "encoding/binary"
     "flag"
     "fmt"
     "io/ioutil"
@@ -51,7 +52,7 @@ func main() {
     psiParams := PSIParams{
         CuckooN: uint64(*cuckooN),
         BucketN: uint64(*bucketN),
-        BucketSize: uint64(*bucketSize),
+        BucketSize: 0,
         BucketsPerCol: uint64(*bucketsPerCol),
         Threads: *threads,
     }
@@ -77,6 +78,7 @@ func main() {
 
         queries  := make([][]uint64, *cuckooN)
         oprfs    := make([][]byte, *cuckooN)
+        params   := make([]PSIParams, *cuckooN)
 
         for i := int64(0); i < *cuckooN; i++ {
             queries[i] = ReadQueries(
@@ -85,12 +87,13 @@ func main() {
             _, oprfs[i] = ReadDatabase[byte](
                 fmt.Sprintf("%s%d%s", CLIENT_OPRF_PREFIX, i, CLIENT_OPRF_SUFFIX),
             )
+            params[i] = psiParams
         }
 
         timer := StartTimer("[ client ] pir offline", BLUE)
         states := make([]ClientState, *cuckooN)
         for i := int64(0); i < *cuckooN; i++ {
-            states[i] = RunClientOffline(&psiParams, server)
+            states[i] = RunClientOffline(&params[i], server)
         }
         timer.End()
 
@@ -99,13 +102,12 @@ func main() {
         for i, query := range queries {
             // translate the hash value into the column by dividing by the number
             // of buckets per column
-            indices[i] = query[0] / psiParams.BucketsPerCol
+            indices[i] = query[0] / params[i].BucketsPerCol
         }
 
         var results [][]byte
         if psiParams.Threads == 1 {
             results = RunClientOnline(
-                &psiParams,
                 states,
                 indices,
                 server,
@@ -113,7 +115,6 @@ func main() {
             )
         } else {
             results = RunClientOnlineMultiThread(
-                &psiParams,
                 states,
                 indices,
                 server,
@@ -152,7 +153,7 @@ func main() {
         if err != nil { panic(err) }
         defer client.Close()
 
-        datasets := ReadServerInputs(*cuckooN, &psiParams)
+        datasets, params := ReadServerInputs(*cuckooN, psiParams)
 
         timer := StartTimer("[ server ] pir offline", RED)
         states := make([]ServerState, *cuckooN)
@@ -160,11 +161,13 @@ func main() {
         if psiParams.Threads == 1 {
             payloads := make([][]byte, *cuckooN)
             for i, dataset := range datasets {
-                result := RunServerOffline(&psiParams, dataset)
+                result := RunServerOffline(&params[i], dataset)
                 states[i] = result.state
                 payloads[i] = result.payload
             }
-            for _, payload := range payloads {
+            for i, payload := range payloads {
+                err = binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
+                if err != nil { panic(err) }
                 WriteOverNetwork(client, payload)
             }
         } else {
@@ -172,19 +175,21 @@ func main() {
             for i := range datasets {
                 channels[i] = make(chan ServerOfflineResult)
                 go func(i int) {
-                    channels[i] <- RunServerOffline(&psiParams, datasets[i])
+                    channels[i] <- RunServerOffline(&params[i], datasets[i])
                 }(i)
             }
             for i, channel := range channels {
                 result := <-channel
                 states[i] = result.state
+                err = binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
+                if err != nil { panic(err) }
                 WriteOverNetwork(client, result.payload)
             }
         }
         timer.End()
 
         timer = StartTimer("[ server ] pir online", RED)
-        RunServerOnline(&psiParams, states, client)
+        RunServerOnline(states, client, psiParams.Threads)
         timer.End()
 
     } else {

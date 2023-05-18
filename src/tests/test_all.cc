@@ -26,16 +26,9 @@ int main() {
         th.add("test_hash_range                   ", test_hash_range);
         th.add("test_hashtable_insert_one         ", test_hashtable_insert_one);
         th.add("test_hashtable_insert_many        ", test_hashtable_insert_many);
-        th.add("test_hashtable_insert_one_point   ", test_hashtable_insert_one_point);
-        th.add("test_hashtable_insert_many_points ", test_hashtable_insert_many_points);
         th.add("test_hashtable_pad_empty          ", test_hashtable_pad_empty);
         th.add("test_hashtable_pad_one            ", test_hashtable_pad_one);
         th.add("test_hashtable_pad_many           ", test_hashtable_pad_many);
-        th.add("test_hashtable_pad_empty_threads  ", test_hashtable_pad_empty_threads);
-        th.add("test_hashtable_pad_one_threads    ", test_hashtable_pad_one_threads);
-        th.add("test_hashtable_pad_many_threads   ", test_hashtable_pad_many_threads);
-        th.add("test_hashtable_shuffle            ", test_hashtable_shuffle);
-        th.add("test_hashtable_apply_hash         ", test_hashtable_apply_hash);
         th.add("test_cuckoo_hash_repeat           ", test_cuckoo_hash_repeat);
         th.add("test_cuckoo_hash_diff             ", test_cuckoo_hash_diff);
         th.add("test_cuckoo_insert_one            ", test_cuckoo_insert_one);

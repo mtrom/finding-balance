@@ -1,8 +1,6 @@
 #include <future>
 
 #include "cuckoo.h"
-#include "server.h"
-#include "client.h"
 #include "utils.h"
 
 namespace unbalanced_psi {

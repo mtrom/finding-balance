@@ -196,7 +196,7 @@ func RunBenchmark(
         PrepInputs(cfg, section)
         conn := SetupConnections()
 
-        datasets := ReadServerInputs(int64(psiParams.CuckooN), &psiParams)
+        datasets, params := ReadServerInputs(int64(psiParams.CuckooN), psiParams)
 
         fmt.Printf("%s : %s\t", benchmarkName, section)
 
@@ -204,7 +204,7 @@ func RunBenchmark(
         for i := 0; i < trials; i++ {
             fmt.Printf(".")
             start := time.Now()
-            fn(datasets, &psiParams, conn)
+            fn(datasets, &params[i], conn)
             runtimes[i] = time.Since(start).Seconds()
         }
         fmt.Printf("\n")

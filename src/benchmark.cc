@@ -104,7 +104,6 @@ int main(int argc, char *argv[]) {
             config.get(section, "cuckoo_pad"),
             config.get(section, "cuckoo_hashes"),
             config.get(section, "hashtable_n"),
-            config.get(section, "hashtable_pad"),
             int(config.get(section, "threads"))
         );
 

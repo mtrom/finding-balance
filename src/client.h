@@ -3,7 +3,6 @@
 #include <optional>
 
 #include "defines.h"
-#include "hashtable.h"
 #include "utils.h"
 
 #define CLIENT_SEED 18

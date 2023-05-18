@@ -32,16 +32,7 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     // read in encrypted database from file
     metadata, values := ReadDatabase[uint64](SERVER_DATABASE, "bucketSize")
 
-    dynamicBucketSize := false
-    if psiParams.BucketSize == 0 {
-        dynamicBucketSize = true
-        psiParams.BucketSize = metadata["bucketSize"]
-    } else if psiParams.BucketSize != metadata["bucketSize"] {
-        panic(fmt.Sprintf(
-            "bucket size inconsistent between file and params: %d vs. %d",
-            metadata["bucketSize"], psiParams.BucketSize,
-        ))
-    }
+    psiParams.BucketSize = metadata["bucketSize"]
 
     if uint64(len(values)) != psiParams.DBBytes() {
         panic(fmt.Sprintf(
@@ -91,10 +82,8 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     ready := []byte{1}
     client.Write(ready)
 
-    if dynamicBucketSize {
-        err := binary.Write(client, binary.LittleEndian, &psiParams.BucketSize)
-        if err != nil { panic(err) }
-    }
+    err = binary.Write(client, binary.LittleEndian, &psiParams.BucketSize)
+    if err != nil { panic(err) }
 
     // because the offline data is so large, it needs to be chunked
     WriteOverNetwork(client, offline)
@@ -187,9 +176,9 @@ func RunServerOffline(
 }
 
 func RunServerOnline(
-    psiParams *PSIParams,
     states []ServerState,
     client net.Conn,
+    threads uint,
 ) {
     queries := make([]*Matrix, len(states))
     for i, state := range states {
@@ -206,7 +195,7 @@ func RunServerOnline(
         queries[i] = BytesToMatrix(req, queryRows, 1)
     }
 
-    if psiParams.Threads == 1 {
+    if threads == 1 {
         for i, state := range states {
             // generate answer and send to client
             answer := state.protocol.Answer(
@@ -243,20 +232,12 @@ func RunServerOnline(
 
 func ReadServerInputs(
     cuckooN int64,
-    psiParams *PSIParams,
-) ([][]uint64) {
+    psiParams PSIParams,
+) ([][]uint64, []PSIParams ) {
     if cuckooN == 1 {
-
         metadata, dataset := ReadDatabase[uint64](SERVER_DATABASE, "bucketSize")
 
-        if psiParams.BucketSize == 0 {
-            psiParams.BucketSize = metadata["bucketSize"]
-        } else if psiParams.BucketSize != metadata["bucketSize"] {
-            panic(fmt.Sprintf(
-                "bucket size inconsistent between file and params: %d vs. %d",
-                metadata["bucketSize"], psiParams.BucketSize,
-            ))
-        }
+        psiParams.BucketSize = metadata["bucketSize"]
 
         if uint64(len(dataset)) != psiParams.DBBytes() {
             panic(fmt.Sprintf(
@@ -265,30 +246,25 @@ func ReadServerInputs(
             ))
         }
 
-        return [][]uint64{dataset}
+        return [][]uint64{dataset}, []PSIParams{psiParams}
     }
 
     datasets := make([][]uint64, cuckooN)
+    params   := make([]PSIParams, cuckooN)
     for i := int64(0); i < cuckooN; i++ {
         metadata, values := ReadDatabase[uint64](
             fmt.Sprintf("%s%d%s", SERVER_DATABASE_PREFIX, i, SERVER_DATABASE_SUFFIX),
             "bucketSize",
         )
 
-        if psiParams.BucketSize == 0 {
-            psiParams.BucketSize = metadata["bucketSize"]
-        } else if psiParams.BucketSize != metadata["bucketSize"] {
-            panic(fmt.Sprintf(
-                "bucket size inconsistent between file and params: %d vs. %d",
-                metadata["bucketSize"], psiParams.BucketSize,
-            ))
-        }
+        params[i] = psiParams
+        params[i].BucketSize = metadata["bucketSize"]
 
-        if uint64(len(values)) != psiParams.DBBytes() {
+        if uint64(len(values)) != params[i].DBBytes() {
             panic("database size inconsistent between file and params")
         }
 
         datasets[i] = values
     }
-    return datasets
+    return datasets, params
 }
