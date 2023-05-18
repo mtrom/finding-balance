@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../hashtable.h"
-
 namespace unbalanced_psi {
     void test_hash_repeat();
     void test_hash_range();

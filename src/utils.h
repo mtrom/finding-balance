@@ -131,14 +131,6 @@ namespace unbalanced_psi {
     Point hash_to_group_element(INPUT_TYPE input);
 
     /**
-     * hash a vector of elements to group elements for ddh
-     *
-     * @params <inputs> elements to hash
-     * @return random group elements
-     */
-    vector<Point> hash_to_group_elements(vector<INPUT_TYPE> inputs, RandomOracle oracle);
-
-    /**
      * hash a group element to a byte vector of specified size
      *
      * @params <element> to be hashed

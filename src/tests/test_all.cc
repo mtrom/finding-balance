@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include "../defines.h"
+#include <cryptoTools/Common/TestCollection.h>
 
 #include "test_cuckoo.h"
 #include "test_hashtable.h"
@@ -14,7 +14,7 @@ int main() {
     std::ofstream nullstream;
     std::clog.rdbuf(nullstream.rdbuf());
 
-    TestCollection tests([](TestCollection& th) {
+    osuCrypto::TestCollection tests([](osuCrypto::TestCollection& th) {
         th.add("test_generate_datasets_overlap    ", test_generate_datasets_overlap);
         th.add("test_write_read_dataset           ", test_write_read_dataset);
         th.add("test_read_dataset                 ", test_read_dataset);

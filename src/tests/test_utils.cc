@@ -1,7 +1,12 @@
 #include "test_utils.h"
+
+#include <cryptoTools/Common/TestCollection.h>
+
 #include "../utils.h"
 
 namespace unbalanced_psi {
+
+    using UnitTestFail = osuCrypto::UnitTestFail;
 
     void compare_vectors(vector<INPUT_TYPE> expected, vector<INPUT_TYPE> actual, std::string err_msg) {
         if (expected == actual) { return; }

@@ -10,11 +10,10 @@ int main(int argc, char *argv[]) {
     osuCrypto::CLP parser;
 	parser.parse(argc, argv);
 
-    std::ofstream nullstream;
-    std::clog.rdbuf(nullstream.rdbuf());
-
-    IOService ios(IOS_THREADS);
-    ios.mPrint = false;
+    if (!parser.isSet("-debug")) {
+        std::ofstream nullstream;
+        std::clog.rdbuf(nullstream.rdbuf());
+    }
 
     auto params = PSIParams(
         parser.get<u64>("-cuckoo-n"),
@@ -23,6 +22,9 @@ int main(int argc, char *argv[]) {
         parser.get<u64>("-hashtable-n"),
         parser.getOr<int>("-threads", 1)
     );
+
+    IOService ios(params.threads);
+    ios.mPrint = false;
 
     if (parser.isSet("client") || parser.isSet("-client")) {
         Client client(CLIENT_INPUT, params);

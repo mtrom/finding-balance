@@ -1,17 +1,19 @@
 #include "test_hashtable.h"
 
-#include <stdio.h>
 #include <algorithm>
 #include <random>
+#include <stdio.h>
 
+#include <cryptoTools/Common/TestCollection.h>
+
+#include "../hashtable.h"
 #include "../utils.h"
 
 #define HASH_SIZE 10
 
 namespace unbalanced_psi {
 
-// fourq doesn't have direct Point comparison so comparing hex values
-#define POINT_VECTORS_NOT_EQUAL(x, y) compare_point_vectors(x, y)
+    using UnitTestFail = osuCrypto::UnitTestFail;
 
     bool compare_point_vectors(vector<Point> actual, vector<Point> expected) {
         if (actual.size() != expected.size()) {

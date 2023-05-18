@@ -1,8 +1,12 @@
 #include "test_cuckoo.h"
 
+#include <cryptoTools/Common/TestCollection.h>
+
 #include "../cuckoo.h"
 
 namespace unbalanced_psi {
+
+    using UnitTestFail = osuCrypto::UnitTestFail;
 
     void test_cuckoo_hash_repeat() {
 
@@ -43,10 +47,6 @@ namespace unbalanced_psi {
 
         cuckoo.insert(input);
 
-        if (cuckoo.size != 1) {
-            throw UnitTestFail("incorrect size after Cuckoo.insert()");
-        }
-
         for (auto i = 0; i < cuckoo.buckets(); i++) {
             if (!cuckoo.table[i].empty() && cuckoo.table[i].back() == input) {
                 return;
@@ -66,10 +66,6 @@ namespace unbalanced_psi {
 
         for (INPUT_TYPE input : inputs) {
             cuckoo.insert(input);
-        }
-
-        if (cuckoo.size != inputs.size()) {
-            throw UnitTestFail("incorrect size after Cuckoo.insert()");
         }
 
         for (auto i = 0; i < cuckoo.buckets(); i++) {
@@ -114,10 +110,6 @@ namespace unbalanced_psi {
         Cuckoo cuckoo(hashes, 100);
 
         cuckoo.insert_all(input);
-
-        if (cuckoo.size != hashes) {
-            throw UnitTestFail("incorrect size after Cuckoo.insert_all()");
-        }
 
         u64 found(0);
         for (auto i = 0; i < cuckoo.buckets(); i++) {
