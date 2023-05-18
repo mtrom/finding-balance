@@ -31,7 +31,6 @@ func main() {
     server := flag.Bool("server", false, "run the pir protocol as the server")
 
     bucketN       := flag.Int64("bucket-n", -1, "total number of buckets in server's hash table")
-    bucketSize    := flag.Int64("bucket-size", -1, "size of each bucket in server's hash table")
     bucketsPerCol := flag.Int64("buckets-per-col", -1, "number of buckets in a col of the database")
     threads       := flag.Uint("threads", 1, "number of threads to run at once")
 
@@ -46,7 +45,6 @@ func main() {
     flag.Parse()
 
     if *bucketN == -1 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
-    if *bucketSize == -1 { fmt.Println("expected --bucket-size argument"); os.Exit(1) }
     if *bucketsPerCol == -1 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
 
     psiParams := PSIParams{
