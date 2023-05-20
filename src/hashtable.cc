@@ -6,7 +6,7 @@
 namespace unbalanced_psi {
 
     Hashtable::Hashtable(u64 buckets) :
-        width(0), table(buckets, vector<u8>()) { }
+        size(0), width(0), table(buckets, vector<u8>()) { }
 
     u64 Hashtable::hash(const vector<u8>& entry, u64 table_size) {
         return Hashtable::hash(entry.data(), table_size);
@@ -22,6 +22,7 @@ namespace unbalanced_psi {
         u64 index = hash(entry, table.size());
         table[index].insert(table[index].begin(), entry.begin(), entry.end());
         if (table[index].size() > width) { width = table[index].size(); }
+        size++;
     }
 
     void Hashtable::pad() {

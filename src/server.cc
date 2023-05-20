@@ -1,7 +1,3 @@
-#include <cmath>
-
-#include "../CTPL/ctpl.h"
-
 #include "server.h"
 
 namespace unbalanced_psi {
@@ -12,120 +8,61 @@ namespace unbalanced_psi {
         dataset(read_dataset<INPUT_TYPE>(filename)), params(p) { }
 
     vector<Hashtable> Server::offline() {
+        // sample a random secret key
         Point::MakeRandomNonzeroScalar(key);
 
-        if (params.cuckoo_size > 1 && params.threads > 1) {
-            return offline(params.threads, params.cuckoo_size);
-        } else if (params.cuckoo_size == 1 && params.threads > 1) {
-            vector<Hashtable> output;
-            output.push_back(offline(params.threads));
-            return output;
-        } else if (params.cuckoo_size > 1 && params.threads == 1) {
-            return offline(params.cuckoo_size);
+
+        Timer timer("[ server ] encrypt & hash", GREEN);
+        // calculate the encrypted hash for each input
+        vector<hash_type> output;
+        if (params.threads == 1) {
+            output = encrypt(dataset.data(), dataset.size());
         } else {
-            vector<vector<u8>> hashes = encrypt(dataset.data(), dataset.size());
+            vector<future<vector<hash_type>>> futures(params.threads);
 
+            // encrypt elements in seperate threads
+            int batch = dataset.size() / params.threads + (dataset.size() % params.threads != 0);
+            for (auto i = 0; i < params.threads; i++) {
+                futures[i] = std::async(
+                    std::launch::async,
+                    &Server::encrypt,
+                    this,
+                    dataset.data() + (i * batch),
+                    i + 1 < params.threads ? batch : dataset.size() - (i * batch)
+                );
+            }
+
+            for (auto i = 0; i < params.threads; i++) {
+                auto partial = futures[i].get();
+                output.insert(output.end(), partial.begin(), partial.end());
+            }
+        }
+        timer.stop();
+
+        timer = Timer("[ server ] organize", GREEN);
+        if (params.cuckoo_size == 1) {
             Hashtable hashtable(params.hashtable_size);
-
-            for (auto hash : hashes) {
-                hashtable.insert(hash);
+            for (auto i = 0; i < output.size(); i++) {
+                hashtable.insert(output[i]);
             }
-
             hashtable.pad();
-
+            timer.stop();
             return vector<Hashtable>{hashtable};
-        }
-    }
-
-    Hashtable Server::offline(int threads) {
-
-        ctpl::thread_pool tpool(threads);
-        vector<std::future<vector<vector<u8>>>> futures(threads);
-
-        // encrypt elements in seperate threads
-        int batch = dataset.size() / threads + (dataset.size() % threads != 0);
-        for (auto i = 0; i < threads; i++) {
-            INPUT_TYPE* elements = dataset.data() + (i * batch);
-            int size = i + 1 < threads ? batch : dataset.size() - (i * batch);
-            futures[i] = tpool.push([this, elements, size](int) {
-                return this->encrypt(elements, size);
-            });
-        }
-
-        Hashtable hashtable(params.hashtable_size);
-
-        // gather encrypted elements and insert into the hashtable
-        for (auto i = 0; i < threads; i++) {
-            vector<vector<u8>> hashes = futures[i].get();
-            for (auto j = 0; j < hashes.size(); j++) {
-                hashtable.insert(hashes[j]);
+        } else {
+            CuckooTable cuckoo(params);
+            for (auto i = 0; i < output.size(); i++) {
+                cuckoo.insert(output[i]);
             }
+            cuckoo.pad();
+            timer.stop();
+            return cuckoo.table;
         }
-
-        hashtable.pad();
-
-        return hashtable;
     }
 
-    /**
-     * run offline with cuckoo hashing on one thread
-     */
-    vector<Hashtable> Server::offline(u64 cuckoo_size) {
-        // set up cuckoo hashtable
-        Cuckoo cuckoo(params.cuckoo_hashes, params.cuckoo_size);
-        cuckoo.insert_all(dataset);
-        cuckoo.pad(params.cuckoo_pad);
-
-        vector<Hashtable> output;
-
-        for (auto i = 0; i < params.cuckoo_size; i++) {
-            output.push_back(get_offline_output(&cuckoo.table[i]));
-        }
-
-        return output;
-    }
-
-    vector<Hashtable> Server::offline(int threads, u64 cuckoo_size) {
-        // set up cuckoo hashtable
-        Cuckoo cuckoo(params.cuckoo_hashes, params.cuckoo_size);
-        cuckoo.insert_all(dataset);
-        cuckoo.pad(params.cuckoo_pad);
-
-        ctpl::thread_pool tpool(threads);
-        vector<std::future<Hashtable>> futures(params.cuckoo_size);
-
-        for (auto i = 0; i < params.cuckoo_size; i++) {
-            auto bucket = &cuckoo.table[i];
-            futures[i] = tpool.push([this, bucket](int) {
-                return this->get_offline_output(bucket);
-            });
-        }
-
-        vector<Hashtable> output;
-        for (auto i = 0; i < params.cuckoo_size; i++) {
-            output.push_back(futures[i].get());
-        }
-
-        return output;
-    }
-
-    Hashtable Server::get_offline_output(vector<INPUT_TYPE>* elements) {
-        Hashtable hashtable(params.hashtable_size);
-        vector<vector<u8>> hashes = encrypt(elements->data(), elements->size());
-
-        for (auto i = 0; i < hashes.size(); i++) {
-            hashtable.insert(hashes[i]);
-        }
-
-        hashtable.pad();
-
-        return hashtable;
-    }
-
-    vector<vector<u8>> Server::encrypt(INPUT_TYPE* elements, int size) {
-        vector<vector<u8>> encrypted;
+    vector<hash_type> Server::encrypt(INPUT_TYPE* elements, int size) {
+        vector<hash_type> encrypted;
         for (auto i = 0; i < size; i++) {
-            vector<u8> hashed(HASH_3_SIZE);
+            hash_type hashed(HASH_3_SIZE);
             auto point = hash_to_group_element(*(elements + i));     // h(x)
             point.scalar_multiply(key, true);                        // h(x)^a
             hash_group_element(point, hashed.size(), hashed.data()); // g(h(x)^a)

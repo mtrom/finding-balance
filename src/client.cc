@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "client.h"
-#include "cuckoo.h"
 #include "hashtable.h"
 
 #define EMPTY_CUCKOO_BUCKET 0
@@ -20,38 +19,24 @@ namespace unbalanced_psi {
         dataset(read_dataset<INPUT_TYPE>(filename)), params(p) {}
 
     void Client::offline() {
+        // sample a random secret key
         Point::MakeRandomNonzeroScalar(key);
 
-        Cuckoo cuckoo(params.cuckoo_hashes, params.cuckoo_size);
-        if (params.cuckoo_size > 1) {
-            for (auto element : dataset) {
-                cuckoo.insert(element);
-            }
-            encrypted.resize(params.cuckoo_size);
-        } else {
-            encrypted.resize(dataset.size());
-        }
-
-        for (auto i = 0; i < encrypted.size(); i++) {
-            // if there's an empty cuckoo bucket don't bother creating an element
-            if (params.cuckoo_size > 1 && cuckoo.table[i].empty()) {
-                encrypted[i] = std::nullopt;
-                continue;
-            }
-            INPUT_TYPE element = params.cuckoo_size > 1 ? cuckoo.table[i][0] : dataset[i];
-            auto point = hash_to_group_element(element); // h(y)
-            point.scalar_multiply(key, false); // h(y)^b
-            encrypted[i] = std::optional<Point>{point};
+        // calculate the encrypted group element for each input
+        for (auto i = 0; i < dataset.size(); i++) {
+            auto point = hash_to_group_element(dataset[i]); // h(y)
+            point.scalar_multiply(key, false);              // h(y)^b
+            encrypted.push_back(point);
         }
     }
 
-    tuple<vector<u8>, vector<u64>> Client::online(Channel channel) {
+    tuple<vector<hash_type>, vector<u64>> Client::online(Channel channel) {
+
         // send encrypted dataset
-        vector<u8> request(dataset.size() * Point::save_size);
+        vector<u8> request(encrypted.size() * Point::save_size);
         auto iter = request.data();
-        for (std::optional<Point> element : encrypted) {
-            if (!element) { continue; }
-            element.value().save(Point::point_save_span_type{iter, Point::save_size});
+        for (Point element : encrypted) {
+            element.save(Point::point_save_span_type{iter, Point::save_size});
             iter += Point::save_size;
         }
         channel.send(request);
@@ -60,30 +45,39 @@ namespace unbalanced_psi {
         vector<u8> response(request.size());
         channel.recv(response);
 
-        vector<u8> hashed(encrypted.size() * HASH_3_SIZE);
-        auto ptr = hashed.data();
-
-        vector<u64> queries(encrypted.size());
-
+        // for decrypting with our secret key
         Number inverse;
         Point::InvertScalar(key, inverse);
-        auto res_index = 0;
-        for (auto i = 0; i < encrypted.size(); i++) {
-            // if there's an empty cuckoo bucket it doesn't matter what the query / hashes are
-            if (!encrypted[i]) { ptr += HASH_3_SIZE; continue; }
-            Point point;
-            point.load(Point::point_save_span_const_type{
-                response.data() + (res_index * Point::save_size),
-                Point::save_size
-            }); // h(y)^ab
-            point.scalar_multiply(inverse, false);
-            hash_group_element(point, HASH_3_SIZE, ptr);          // g(h(y)^a)
-            queries[i] = Hashtable::hash(ptr, params.hashtable_size);
 
-            ptr += HASH_3_SIZE;
-            res_index++;
+        // calculate oprf result and query pairs
+        vector<hash_type> results;
+        vector<u64> queries;
+        for (auto i = 0; i < response.size(); i += Point::save_size) {
+            // oprf result
+            hash_type result(HASH_3_SIZE);
+
+            // parse the group element, decrypt, and hash
+            Point point;
+            point.load(Point::point_save_span_const_type{           // h(y)^ab
+                response.data() + i,
+                Point::save_size
+            });
+            point.scalar_multiply(inverse, false);                  // h(y)^a
+            hash_group_element(point, HASH_3_SIZE, result.data());  // g(h(y)^a)
+
+            // index to use as pir query
+            queries.push_back(Hashtable::hash(result, params.hashtable_size));
+            results.push_back(result);
         }
 
-        return std::make_tuple(hashed, queries);
+        if (params.cuckoo_size == 1) {
+            return std::make_tuple(results, queries);
+        } else {
+            CuckooVector cuckoo(params);
+            for (auto i = 0; i < results.size(); i++) {
+                cuckoo.insert(results[i], queries[i]);
+            }
+            return cuckoo.split();
+        }
     }
 }

@@ -13,6 +13,9 @@ namespace unbalanced_psi {
         // size of largest bucket
         u64 width;
 
+        // number of entries inserted (does not include padding)
+        u64 size;
+
         /**
          * setup hashtable with given number of buckets
          */

@@ -16,6 +16,9 @@
 
 namespace unbalanced_psi {
 
+    // result of the oprf
+    using hash_type = std::vector<osuCrypto::u8>;
+
     // datatypes from std
     using std::array;
     using std::tuple;
@@ -25,17 +28,17 @@ namespace unbalanced_psi {
     using std::map;
 
     // datatypes from osuCrypto
-    using u64 = osuCrypto::u64;
-    using u32 = osuCrypto::u32;
-    using u8 = osuCrypto::u8;
+    using u64   = osuCrypto::u64;
+    using u32   = osuCrypto::u32;
+    using u8    = osuCrypto::u8;
     using block = osuCrypto::block;
 
     // random generators
     using PRNG = osuCrypto::PRNG;
 
     // group element types
-    using Point      = apsi::oprf::ECPoint;
-    using Number     = apsi::oprf::ECPoint::scalar_type;
+    using Point  = apsi::oprf::ECPoint;
+    using Number = apsi::oprf::ECPoint::scalar_type;
 
     // networking
     using IOService   = osuCrypto::IOService;

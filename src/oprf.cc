@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         channel.resetStats();
 
         Timer online("[ client ] ddh online", BLUE);
-        auto [ hashed, queries ] = client.online(channel);
+        auto [ results, queries ] = client.online(channel);
         online.stop();
 
         std::cout << "[  both  ] online comm (bytes)\t: ";
@@ -53,14 +53,13 @@ int main(int argc, char *argv[]) {
         session.stop();
 
         if (params.cuckoo_size == 1) {
-            write_dataset(hashed, CLIENT_ONLINE_OUTPUT);
+            write_results(results, CLIENT_ONLINE_OUTPUT);
             write_dataset(queries, CLIENT_QUERY_OUTPUT);
             return 0;
         }
         for (auto i = 0; i < queries.size(); i++) {
             write_dataset<u8>(
-                hashed.data() + (i * HASH_3_SIZE),
-                HASH_3_SIZE,
+                results[i],
                 CLIENT_ONLINE_OUTPUT_PREFIX
                 + std::to_string(i)
                 + CLIENT_ONLINE_OUTPUT_SUFFIX

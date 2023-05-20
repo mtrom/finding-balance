@@ -35,6 +35,15 @@ namespace unbalanced_psi {
         return datasets;
     }
 
+    void write_results(const vector<hash_type>& results, std::string filename) {
+        std::ofstream file(filename, std::ios::out | std::ios::binary);
+        if (!file) { throw std::runtime_error("cannot open " + filename); }
+        for (auto i = 0; i < results.size(); i++) {
+            file.write((const char*) results[i].data(), results[i].size());
+        }
+        file.close();
+    }
+
     Point hash_to_group_element(INPUT_TYPE input) {
         Point element(gsl::span<const u8>{
             static_cast<const u8*>(static_cast<void*>(&input)),

@@ -75,13 +75,18 @@ namespace unbalanced_psi {
     tuple<vector<INPUT_TYPE>,vector<INPUT_TYPE>> generate_datasets(int server_size, int client_size, int overlap);
 
     /**
+     * write oprf result dataset to binary file
+     */
+    void write_results(const vector<hash_type>& results, std::string filename);
+
+    /**
      * write arbitrary dataset to binary file
      *
      * @param <dataset> dataset to write to file
      * @param <filename> filename to write to
      */
     template <typename T>
-    void write_dataset(vector<T>& dataset, std::string filename) {
+    void write_dataset(const vector<T>& dataset, std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file) { throw std::runtime_error("cannot open " + filename); }
         file.write((const char*) dataset.data(), dataset.size() * sizeof(T));

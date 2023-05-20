@@ -18,6 +18,7 @@
 
 namespace unbalanced_psi {
 
+    using hash_type = vector<u8>;
 
     class Server {
 
@@ -71,28 +72,8 @@ namespace unbalanced_psi {
         private:
 
         /**
-         * run the offline with multiple threads
-         */
-        Hashtable offline(int threads);
-
-        /**
-         * run the offline with cuckoo hashing on a single thread
-         */
-        vector<Hashtable> offline(u64 cuckoo_size);
-
-        /**
-         * run the offline with cuckoo hashing using multiple threads
-         */
-        vector<Hashtable> offline(int threads, u64 cuckoo_size);
-
-        /**
-         * hash given input to group elements, encrypt them, and hash them
-         */
-        Hashtable get_offline_output(vector<INPUT_TYPE>* elements);
-
-        /**
          * hash given input to group elements and encrypt under the secret key
          */
-        vector<vector<u8>> encrypt(INPUT_TYPE* elements, int size);
+        vector<hash_type> encrypt(INPUT_TYPE* elements, int size);
     };
 }

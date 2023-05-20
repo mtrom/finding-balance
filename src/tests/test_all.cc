@@ -31,13 +31,11 @@ int main() {
         th.add("test_hashtable_pad_many           ", test_hashtable_pad_many);
         th.add("test_cuckoo_hash_repeat           ", test_cuckoo_hash_repeat);
         th.add("test_cuckoo_hash_diff             ", test_cuckoo_hash_diff);
-        th.add("test_cuckoo_insert_one            ", test_cuckoo_insert_one);
-        th.add("test_cuckoo_insert_many           ", test_cuckoo_insert_many);
-        th.add("test_cuckoo_insert_overfill       ", test_cuckoo_insert_overfill);
-        th.add("test_cuckoo_insert_all            ", test_cuckoo_insert_all);
-        th.add("test_cuckoo_pad_empty             ", test_cuckoo_pad_empty);
-        th.add("test_cuckoo_pad_one               ", test_cuckoo_pad_one);
-        th.add("test_cuckoo_pad_many              ", test_cuckoo_pad_many);
+        th.add("test_cuckoo_table_insert_one      ", test_cuckoo_table_insert_one);
+        th.add("test_cuckoo_table_insert_many     ", test_cuckoo_table_insert_many);
+        th.add("test_cuckoo_vector_insert         ", test_cuckoo_vector_insert);
+        th.add("test_cuckoo_vector_insert_many    ", test_cuckoo_vector_insert_many);
+        th.add("test_cuckoo_vector_insert_overfill", test_cuckoo_vector_insert_overfill);
     });
 
     tests.runAll();

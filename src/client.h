@@ -1,8 +1,7 @@
 #pragma once
 
-#include <optional>
-
 #include "defines.h"
+#include "cuckoo.h"
 #include "utils.h"
 
 #define CLIENT_SEED 18
@@ -26,10 +25,7 @@ namespace unbalanced_psi {
         std::vector<INPUT_TYPE> dataset;
 
         // client's encrypted dataset
-        vector<std::optional<Point>> encrypted;
-
-        // cuckoo table
-        std::unordered_map<INPUT_TYPE, int> cuckoo_indexes;
+        vector<Point> encrypted;
 
         // secret key
         Number key;
@@ -62,6 +58,6 @@ namespace unbalanced_psi {
          * @params <channel> communication channel with the server
          * @return result of the oprf and query inputs to pir
          */
-        tuple<vector<u8>, vector<u64>> online(Channel channel);
+        tuple<vector<hash_type>, vector<u64>> online(Channel channel);
     };
 }
