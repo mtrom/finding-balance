@@ -4,9 +4,7 @@ import (
 	"crypto/aes"
     "bytes"
     "encoding/binary"
-    "fmt"
     "net"
-    "time"
 
     . "github.com/ahenzinger/simplepir/pir"
 )
@@ -26,12 +24,7 @@ const (
 // go:linkname bufPrgReader pir.bufPrgReader
 var bufPrgReader *BufPRGReader
 
-/**
- * run protocol as the client
- *
- * @param <psiParams> params of the greater psi protocol
- */
-func RunClient(psiParams *PSIParams, expected int64) {
+func RunClient(psiParams *PSIParams, server net.Conn) int64 {
 
     // read in query indices
     _, queries := ReadDatabase[uint64, uint64](CLIENT_QUERIES)
@@ -39,153 +32,64 @@ func RunClient(psiParams *PSIParams, expected int64) {
     // read in result of oprf
     _, oprf := ReadDatabase[byte, byte](CLIENT_OPRF_RESULT)
 
-    // connect to server
-    connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)
-    if err != nil { panic(err) }
-    defer connection.Close()
-
-    server, err := connection.Accept()
-    if err != nil { panic(err) }
-    server.SetDeadline(time.Time{})
-
-    // wait until the client is ready for offline
+    // wait until the server is ready for offline
     ready := make([]byte, 1)
     server.Read(ready)
 
-    ///////////////////////// OFFLINE /////////////////////////
-
-    timer := StartTimer("[ client ] pir offline", BLUE)
-
-    subtimer := StartTimer("[ client ] pick params", YELLOW)
-    err = binary.Read(server, binary.LittleEndian, &psiParams.BucketSize)
-    if err != nil { panic(err) }
-
-    // decide protocol parameters
-    protocol, params, entryBits := SetupProtocol(psiParams)
-    dbInfo := SetupDBInfo(psiParams, entryBits, params)
-
-    subtimer.End()
-    subtimer = StartTimer("[ client ] read data", YELLOW)
-
-    // read in the 'offline' data (i.e., lwe matrix seed and hint)
-    offline := ReadOverNetwork(server, aes.BlockSize + params.L * params.N * ELEMENT_SIZE)
-
-    subtimer.End()
-    subtimer = StartTimer("[ client ] prepare data", YELLOW)
-
-    hint := BytesToMatrix(offline[aes.BlockSize:], params.L, params.N)
-
-    // this seeds the randomness when generating the lwe matrix
-    var seed PRGKey
-    copy(seed[:], offline[:aes.BlockSize])
-    bufPrgReader = NewBufPRG(NewPRG(&seed))
-
-    // generate the lwe matrix from the seed
-    lweMatrix := protocol.DecompressState(dbInfo, *params, MakeCompressedState(&seed))
-
-    subtimer.End()
-    timer.End()
-
-    ///////////////////////////////////////////////////////////
-
-    PrintParams(params)
-    fmt.Printf("[  both  ] offline comm (MB)\t: %.3f\n", float64(len(offline)) / 1000000)
-
-    // let the server know we're ready for online
-    ready = []byte{1}
-    server.Write(ready)
-
-    ////////////////////////// ONLINE /////////////////////////
-
-    queryTimer := CreateTimer("[ client ] pir query", YELLOW)
-    recoverTimer := CreateTimer("[ client ] pir recover", YELLOW)
-    timer = StartTimer("[ client ] pir online", BLUE)
-
-    comm := 0;
-    var results []byte
-    queried := map[uint64]struct{}{}
-    for _, col := range queries {
-
-        // translate the hash value into the column by dividing by the number
-        // of buckets per column
-        translated := col / psiParams.BucketsPerCol
-
-        // generate the query vector and send to server
-        queryTimer.Start()
-        secret, query := protocol.Query(translated, lweMatrix, *params, dbInfo)
-        queryTimer.Stop()
-
-        data := MatrixToBytes(query.Data[0])
-        WriteOverNetwork(server, data)
-        comm += len(data)
-
-        // read the query's answer
-        data = ReadOverNetwork(server, params.L * ELEMENT_SIZE)
-        comm += len(data)
-
-        // if we've already queried this column, don't bother recovering
-        if _, already_queried := queried[translated]; already_queried {
-            continue;
-        } else {
-            queried[translated] = struct{}{}
-        }
-
-        answer := BytesToMatrix(data, params.L, 1)
-
-        // reconstruct the data based on the answer
-        recoverTimer.Start()
-        column := RecoverColumn(
-            MakeMsg(hint),
-            query,
-            MakeMsg(answer),
-            secret,
-            *params,
-            dbInfo,
-        )
-        recoverTimer.Stop()
-
-        results = append(results, column...)
-    }
-
-    // find intersection between OPRF and PIR results
-    subtimer = StartTimer("[ client ] find result", YELLOW)
     found := int64(0)
-    for i := 0; i < len(results); i += ENTRY_SIZE {
-        for j := 0; j < len(oprf); j += ENTRY_SIZE {
-            if bytes.Equal(results[i:i+ENTRY_SIZE], oprf[j:j+ENTRY_SIZE]) {
-                found++;
-            }
+    if psiParams.CuckooN == 1 {
+        /////////////////// OFFLINE ////////////////////
+        timer := StartTimer("[ client ] pir offline", BLUE)
+        state := CreateClientState(psiParams, server)
+        timer.End()
+        ////////////////////////////////////////////////
+
+        // let the server know we're ready for online
+        ready = []byte{1}
+        server.Write(ready)
+
+        //////////////////// ONLINE ////////////////////
+        timer = StartTimer("[ client ] pir online", BLUE)
+        for _, query := range queries {
+            state.SendQuery(query, server)
+            found += state.ReadResponse(oprf, server)
         }
-    }
-    subtimer.Stop()
-    timer.End()
-    queryTimer.Print()
-    recoverTimer.Print()
-    subtimer.Print()
-
-    ///////////////////////////////////////////////////////////
-
-    fmt.Printf("[  both  ] online comm (MB)\t: %.3f\n", float64(comm) / 1000000)
-
-    if found == expected {
-        fmt.Printf("%s>>>>>>>>>>>>>>> SUCCESS <<<<<<<<<<<<<<<%s\n", GREEN, RESET)
+        timer.End()
+        ////////////////////////////////////////////////
     } else {
-        fmt.Printf("%s>>>>>>>>> FAILURE [%d vs %d] >>>>>>>>>%s\n", RED, found, expected, RESET)
+        /////////////////// OFFLINE ////////////////////
+        timer := StartTimer("[ client ] pir offline", BLUE)
+        states := make([]*ClientState, psiParams.CuckooN)
+        for i := uint64(0); i < psiParams.CuckooN; i++ {
+            states[i] = CreateClientState(psiParams, server)
+        }
+        timer.End()
+        ////////////////////////////////////////////////
+
+        //////////////////// ONLINE ////////////////////
+        timer = StartTimer("[ client ] pir online", BLUE)
+        for i := uint64(0); i < psiParams.CuckooN; i++ {
+            states[i].SendQuery(queries[i], server)
+        }
+        for i := uint64(0); i < psiParams.CuckooN; i++ {
+            found += states[i].ReadResponse(
+                oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE], server,
+            )
+        }
+        timer.End()
+        ////////////////////////////////////////////////
     }
+    return found
 }
 
-type ClientState struct {
-    params    *Params
-    dbInfo    DBinfo
-    protocol  SimplePIR
-    hint      *Matrix
-    lweMatrix State
-}
-
-func RunClientOffline(
+/**
+ * download hint / lwe matrix and compute parameters
+ */
+func CreateClientState(
     psiParams *PSIParams,
     server net.Conn,
-) ClientState {
+) *ClientState {
+    // read bucket size from server
     err := binary.Read(server, binary.LittleEndian, &psiParams.BucketSize)
     if err != nil { panic(err) }
 
@@ -195,7 +99,6 @@ func RunClientOffline(
 
     // read in the 'offline' data (i.e., lwe matrix seed and hint)
     offline := ReadOverNetwork(server, aes.BlockSize + params.L * params.N * ELEMENT_SIZE)
-
     hint := BytesToMatrix(offline[aes.BlockSize:], params.L, params.N)
 
     // this seeds the randomness when generating the lwe matrix
@@ -206,147 +109,100 @@ func RunClientOffline(
     // generate the lwe matrix from the seed
     lweMatrix := protocol.DecompressState(dbInfo, *params, MakeCompressedState(&seed))
 
-    return ClientState{
-        params: params,
-        dbInfo: dbInfo,
-        protocol: protocol,
-        hint: hint,
-        lweMatrix: lweMatrix,
+    return &ClientState{
+        Params: params,
+        DBInfo: dbInfo,
+        BucketsPerCol: psiParams.BucketsPerCol,
+        Hint: hint,
+        LweMatrix: lweMatrix,
+        Secret: nil,
+        Query: nil,
+        SkipRecover: false,
     }
 }
 
-func RunClientOnline(
-    states []ClientState,
-    indices []uint64,
-    server net.Conn,
-    already_queried bool,
-) [][]byte {
-    secrets := make([]State, len(indices))
-    queries := make([]Msg, len(indices))
-    requests := make([][]byte, len(indices))
+/**
+ * holds info between offline and online
+ */
+type ClientState struct {
+    Params        *Params
+    BucketsPerCol uint64
+    DBInfo        DBinfo
+    Hint          *Matrix
+    LweMatrix     State
+    Secret        *State
+    Query         *Msg
+    SkipRecover   bool
+}
 
-    for i, index := range indices {
-        secret, query := states[i].protocol.Query(
-            index,
-            states[i].lweMatrix,
-            *states[i].params,
-            states[i].dbInfo,
-        )
-        secrets[i] = secret
-        queries[i] = query
-        requests[i] = MatrixToBytes(query.Data[0])
+/**
+ * send out a query for a column
+ */
+func (state* ClientState) SendQuery(column uint64, server net.Conn) {
+    protocol := SimplePIR{}
+
+    // translate the hash table index into the rectangular database column
+    //  (or if this is a blank query just use 0)
+    translated := column / state.BucketsPerCol
+    if column == BLANK_QUERY {
+        translated = 0
+        state.SkipRecover = true
     }
 
-    for _, req := range requests {
-        WriteOverNetwork(server, req)
-    }
+    // generate the query vector and send to server
+    secret, query := protocol.Query(
+        translated,
+        state.LweMatrix,
+        *state.Params,
+        state.DBInfo,
+    )
 
-    responses := make([][]byte, len(queries))
-    for i := range queries {
-        // read the query's answer
-        responses[i] = ReadOverNetwork(server, states[i].params.L * ELEMENT_SIZE)
-    }
+    state.Secret, state.Query = &secret, &query
 
-    // padding elements will all be sequences of 0
-    var paddingElement [ENTRY_SIZE]byte
-    cols := make([][]byte, len(responses))
-    for i, response := range responses {
+    request := MatrixToBytes(state.Query.Data[0])
+    WriteOverNetwork(server, request)
+}
 
-        // if this is an empty cuckoo bucket, don't bother recovering
-        if indices[i] == BLANK_QUERY {
-            fmt.Printf("not reconstructing %d\n", i)
-            continue;
+/**
+ *  process query response and determine intersection
+ */
+func (state* ClientState) ReadResponse(oprf []byte, server net.Conn) int64 {
+    // read response over network
+    response := ReadOverNetwork(server, state.Params.L * ELEMENT_SIZE)
+
+    // if this is a blank query, don't bother recovering
+    if state.SkipRecover { return 0; }
+
+    answer := BytesToMatrix(response, state.Params.L, 1)
+
+    // reconstruct the data based on the answer
+    var results []byte
+    column := RecoverColumn(
+        MakeMsg(state.Hint),
+        *state.Query,
+        MakeMsg(answer),
+        *state.Secret,
+        *state.Params,
+        state.DBInfo,
+    )
+
+    // only add non-zero results (i.e., not padding)
+    var PADDING [ENTRY_SIZE]byte
+    for j := 0; j < len(column); j += ENTRY_SIZE {
+        if !bytes.Equal(column[j:j+ENTRY_SIZE], PADDING[:]) {
+            results = append(results, column[j:j+ENTRY_SIZE]...)
         }
+    }
 
-        answer := BytesToMatrix(response, states[i].params.L, 1)
-
-        // reconstruct the data based on the answer
-        raw := RecoverColumn(
-            MakeMsg(states[i].hint),
-            queries[i],
-            MakeMsg(answer),
-            secrets[i],
-            *states[i].params,
-            states[i].dbInfo,
-        )
-
-        for j := 0; j < len(raw); j += ENTRY_SIZE {
-            if !bytes.Equal(raw[j:j+ENTRY_SIZE], paddingElement[:]) {
-                cols[i] = append(cols[i], raw[j:j+ENTRY_SIZE]...)
+    // find intersection between oprf and pir results
+    intersection := int64(0)
+    for i := 0; i < len(results); i += ENTRY_SIZE {
+        for j := 0; j < len(oprf); j += ENTRY_SIZE {
+            if bytes.Equal(results[i:i+ENTRY_SIZE], oprf[j:j+ENTRY_SIZE]) {
+                intersection++;
             }
         }
     }
 
-    return cols
-}
-
-func RunClientOnlineMultiThread(
-    states []ClientState,
-    indices []uint64,
-    server net.Conn,
-    already_queried bool,
-) [][]byte {
-    secrets := make([]State, len(indices))
-    queries := make([]Msg, len(indices))
-
-    channels := make([]chan []byte, len(states))
-    for i, index := range indices {
-        channels[i] = make(chan []byte)
-        go func(i int, index uint64, state ClientState) {
-            secret, query := state.protocol.Query(
-                index,
-                state.lweMatrix,
-                *state.params,
-                state.dbInfo,
-            )
-            secrets[i] = secret
-            queries[i] = query
-            channels[i] <- MatrixToBytes(query.Data[0])
-        }(i, index, states[i])
-    }
-    for _, channel := range channels {
-        req := <-channel
-        WriteOverNetwork(server, req)
-    }
-
-    // padding elements will all be sequences of 0
-    var paddingElement [ENTRY_SIZE]byte
-
-    for i, state := range states {
-        go func(i int, state ClientState) {
-            response := <-channels[i]
-            // if we've already queried this column, don't bother recovering
-            answer := BytesToMatrix(response, state.params.L, 1)
-
-            // reconstruct the data based on the answer
-            raw := RecoverColumn(
-                MakeMsg(state.hint),
-                queries[i],
-                MakeMsg(answer),
-                secrets[i],
-                *state.params,
-                state.dbInfo,
-            )
-
-            col := make([]byte, 0)
-            for j := 0; j < len(raw); j += ENTRY_SIZE {
-                if !bytes.Equal(raw[j:j+ENTRY_SIZE], paddingElement[:]) {
-                    col = append(col, raw[j:j+ENTRY_SIZE]...)
-                }
-            }
-            channels[i] <- col
-        }(i, state)
-    }
-
-    for i := range queries {
-        // read the query's answer
-        channels[i] <- ReadOverNetwork(server, states[i].params.L * ELEMENT_SIZE)
-    }
-
-    cols := make([][]byte, len(queries))
-    for i := range cols {
-        cols[i] = <-channels[i]
-    }
-
-    return cols
+    return intersection
 }

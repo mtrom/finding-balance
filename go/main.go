@@ -1,7 +1,6 @@
 package main
 
 import (
-    "bytes"
     "encoding/binary"
     "flag"
     "fmt"
@@ -10,6 +9,7 @@ import (
     "net"
     "os"
     "runtime"
+    "time"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
     bucketsPerCol := flag.Int64("buckets-per-col", -1, "number of buckets in a col of the database")
     threads       := flag.Uint("threads", 1, "number of threads to run at once")
 
-    cuckooN       := flag.Int64("cuckoo-n", -1, "total number of buckets in server's hash table")
+    cuckooN       := flag.Int64("cuckoo-n", 1, "total number of buckets in server's hash table")
 
     // client-only flag
     expected := flag.Int64("expected", -1, "expected size of intersection")
@@ -54,11 +54,6 @@ func main() {
     if *client {
         if *expected == -1 { fmt.Println("need --expected argument"); os.Exit(1) }
 
-        if *cuckooN == -1 {
-            RunClient(&psiParams, *expected)
-            os.Exit(0)
-        }
-
         // connect to server
         connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)
         if err != nil { panic(err) }
@@ -66,83 +61,38 @@ func main() {
 
         server, err := connection.Accept()
         if err != nil { panic(err) }
+        server.SetDeadline(time.Time{})
 
-        params   := make([]PSIParams, *cuckooN)
+        // run protocol
+        actual := RunClient(&psiParams, server)
 
-        // read in query indices
-        _, queries := ReadDatabase[uint64, uint64](CLIENT_QUERIES)
-
-        // read in result of oprf
-        _, oprf := ReadDatabase[byte, byte](CLIENT_OPRF_RESULT)
-
-        for i := int64(0); i < *cuckooN; i++ {
-            params[i] = psiParams
-        }
-
-        timer := StartTimer("[ client ] pir offline", BLUE)
-        states := make([]ClientState, *cuckooN)
-        for i := int64(0); i < *cuckooN; i++ {
-            states[i] = RunClientOffline(&params[i], server)
-        }
-        timer.End()
-
-        timer = StartTimer("[ client ] pir online", BLUE)
-        indices := make([]uint64, *cuckooN)
-        for i, query := range queries {
-            if query == BLANK_QUERY {
-                // don't translate blank queries so we can still identify them
-                indices[i] = query;
-            } else {
-                // translate the hash value into the column by dividing by the number
-                // of buckets per column
-                indices[i] = query / params[i].BucketsPerCol
-            }
-        }
-
-        var results [][]byte
-        if psiParams.Threads == 1 {
-            results = RunClientOnline(
-                states,
-                indices,
-                server,
-                false,
-            )
-        } else {
-            results = RunClientOnlineMultiThread(
-                states,
-                indices,
-                server,
-                false,
-            )
-        }
-
-        // find intersection between OPRF and PIR results
-        found := int64(0)
-        for c := int64(0); c < *cuckooN; c++ {
-            for i := 0; i < len(results[c]); i += ENTRY_SIZE {
-                if bytes.Equal(results[c][i:i+ENTRY_SIZE], oprf[c*ENTRY_SIZE:(c+1)*ENTRY_SIZE]) {
-                    found++
-                }
-            }
-        }
-        timer.End()
-
-        if found == *expected {
+        // report results
+        if actual == *expected {
             fmt.Printf("%s>>>>>>>>>>>>>>> SUCCESS <<<<<<<<<<<<<<<%s\n", GREEN, RESET)
+            os.Exit(0)
         } else {
-            fmt.Printf("%s>>>>>>>>> FAILURE [%d vs %d] >>>>>>>>>%s\n", RED, found, *expected, RESET)
+            fmt.Printf(
+                "%s>>>>>>>>> FAILURE [%d vs %d] >>>>>>>>>%s\n",
+                RED, actual, expected, RESET,
+            )
+            os.Exit(1)
         }
 
     } else if *server {
-        if *cuckooN == -1 {
+        if *cuckooN == 1 {
             if *queries_log == -1 { fmt.Println("expected --queries-log argument"); os.Exit(1) }
             RunServer(1 << *queries_log, &psiParams)
             os.Exit(0)
         }
 
         // connect to client
-        client, err := net.Dial(SERVER_TYPE, SERVER_HOST)
-        if err != nil { panic(err) }
+        var client net.Conn
+        for i := 0; i < CONNECTION_RETRIES; i++ {
+            conn, err := net.Dial(SERVER_TYPE, SERVER_HOST)
+            if err == nil { client = conn; break; }
+            if i + 1 == CONNECTION_RETRIES { panic(err) }
+            time.Sleep((2 << i) * time.Millisecond)
+        }
         defer client.Close()
 
         datasets, params := ReadServerInputs(*cuckooN, psiParams)
@@ -157,8 +107,13 @@ func main() {
                 states[i] = result.state
                 payloads[i] = result.payload
             }
+
+            // let the client know we're ready for offline
+            ready := []byte{1}
+            client.Write(ready)
+
             for i, payload := range payloads {
-                err = binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
+                err := binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
                 if err != nil { panic(err) }
                 WriteOverNetwork(client, payload)
             }
@@ -170,10 +125,15 @@ func main() {
                     channels[i] <- RunServerOffline(&params[i], datasets[i])
                 }(i)
             }
+
+            // let the client know we're ready for offline
+            ready := []byte{1}
+            client.Write(ready)
+
             for i, channel := range channels {
                 result := <-channel
                 states[i] = result.state
-                err = binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
+                err := binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
                 if err != nil { panic(err) }
                 WriteOverNetwork(client, result.payload)
             }

@@ -17,6 +17,8 @@ const (
     SERVER_DATABASE = "out/server.edb"
     SERVER_DATABASE_PREFIX = "out/"
     SERVER_DATABASE_SUFFIX = "/server.edb"
+
+    CONNECTION_RETRIES = 5
 )
 
 var mutex sync.Mutex
@@ -42,8 +44,13 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     }
 
     // connect to client
-    client, err := net.Dial(SERVER_TYPE, SERVER_HOST)
-    if err != nil { panic(err) }
+    var client net.Conn
+    for i := 0; i < CONNECTION_RETRIES; i++ {
+        conn, err := net.Dial(SERVER_TYPE, SERVER_HOST)
+        if err == nil { client = conn; break; }
+        if i + 1 == CONNECTION_RETRIES { panic(err) }
+        time.Sleep((2 << i) * time.Millisecond)
+    }
     defer client.Close()
     client.SetDeadline(time.Time{})
 
@@ -82,7 +89,7 @@ func RunServer(queries uint64, psiParams *PSIParams) {
     ready := []byte{1}
     client.Write(ready)
 
-    err = binary.Write(client, binary.LittleEndian, &psiParams.BucketSize)
+    err := binary.Write(client, binary.LittleEndian, &psiParams.BucketSize)
     if err != nil { panic(err) }
 
     // because the offline data is so large, it needs to be chunked
