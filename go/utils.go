@@ -1,12 +1,10 @@
 package main
 
 import (
-    "bufio"
     "bytes"
     "encoding/binary"
     "fmt"
     "io"
-    "log"
     "net"
     "os"
     "time"
@@ -122,15 +120,16 @@ func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
 
 /**
  * read database from file including any metadata
+ *  note R is the type we're reading in from the file and W is the type we're returning
  *
  * @params <filename>
  * @params <metadata> name for each uint64 metadata value at the beginning of the database
  * @return map of name to metadata value and the database values
  */
-func ReadDatabase[T ~uint64 | ~byte](
+func ReadDatabase[R ~uint64 | ~byte, W ~uint64 | ~byte](
     filename string,
     metadata ...string,
-) (map[string]uint64, []T) {
+) (map[string]uint64, []W) {
     file, err := os.ReadFile(filename)
     if err != nil { panic(err) }
 
@@ -143,61 +142,20 @@ func ReadDatabase[T ~uint64 | ~byte](
         metamap[name] = value
     }
 
-    var values []T
+    var values []W
     for {
-        var value byte
+        var value R
         err := binary.Read(reader, binary.LittleEndian, &value)
         if err == io.EOF {
             break
         } else if err != nil {
             panic(err)
         }
-        values = append(values, T(value))
+        values = append(values, W(value))
     }
 
     return metamap, values
 }
-
-func WriteDatabase(filename string, values []uint64) {
-    log.Printf("[ go/pir ] writing %d values to %s\n", len(values), filename)
-    file, err := os.Create(filename)
-    if err != nil { panic(err) }
-    defer file.Close()
-
-    buffer := bufio.NewWriter(file)
-
-    for _, value := range values {
-        /* why???
-        if (value == 0) {
-            continue;
-        }
-        */
-        binary.Write(buffer, binary.LittleEndian, uint8(value))
-    }
-    buffer.Flush()
-}
-
-func ReadQueries(filename string) []uint64 {
-    file, err := os.ReadFile(filename)
-    if err != nil { panic(err) }
-
-    reader := bytes.NewReader(file)
-
-    var queries []uint64
-    for {
-        var index uint64
-        err := binary.Read(reader, binary.LittleEndian, &index)
-        if err == io.EOF {
-            break
-        } else if err != nil {
-            panic(err)
-        }
-
-        queries = append(queries, index)
-    }
-    return queries
-}
-
 
 /**
  * serializes matrix into []byte for sending over network

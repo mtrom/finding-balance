@@ -74,6 +74,9 @@ namespace unbalanced_psi {
     }
 
     tuple<vector<hash_type>, vector<u64>> CuckooVector::split() {
+        u64 BLANK_QUERY = 0;
+        hash_type BLANK_RESULT = hash_type(HASH_3_SIZE, 0);
+
         vector<hash_type> results;
         vector<u64> queries;
         for (auto i = 0; i < table.size(); i++) {

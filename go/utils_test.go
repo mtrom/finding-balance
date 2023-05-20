@@ -8,7 +8,7 @@ import (
 
 func TestReadDatabase(t *testing.T) {
     cwd, _ := os.Getwd()
-    metadata, db := ReadDatabase[uint64](
+    metadata, db := ReadDatabase[byte, uint64](
         filepath.Join(cwd, "test.edb"),
         "hashtableSize", "bucketSize",
     )

@@ -38,10 +38,10 @@ var bufPrgReader *BufPRGReader
 func RunClient(psiParams *PSIParams, expected int64) {
 
     // read in query indices
-    queries := ReadQueries(CLIENT_QUERIES)
+    _, queries := ReadDatabase[uint64, uint64](CLIENT_QUERIES)
 
     // read in result of oprf
-    _, oprf := ReadDatabase[byte](CLIENT_OPRF_RESULT)
+    _, oprf := ReadDatabase[byte, byte](CLIENT_OPRF_RESULT)
 
     // connect to server
     connection, err := net.Listen(SERVER_TYPE, SERVER_HOST)

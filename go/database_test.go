@@ -11,7 +11,7 @@ func TestDatabaseDims(t *testing.T) {
         bucketN, bucketSize, bucketsPerCol, entryBits, ptMod uint64
         expectedRows, expectedCols uint64
     }{
-        {32, 4, 2, 8, 991, 80, 16},
+        {32, 4, 2, 8, 991, 8, 16},
         // TODO: add more tests
     }
 

@@ -16,9 +16,6 @@ namespace unbalanced_psi {
     // oprf output and its pir query
     using cuckoo_tuple = tuple<hash_type, u64>;
 
-    const u64 BLANK_QUERY = 0;
-    const hash_type BLANK_RESULT = hash_type(HASH_3_SIZE, 0);
-
     /**
      * hashtables where each element is added once for each cuckoo hash
      */

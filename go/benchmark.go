@@ -48,7 +48,7 @@ func NewConfig(filename string) (*Config) {
 			key := strings.TrimSpace(line[:split])
 			val, err := strconv.ParseUint(strings.TrimSpace(line[split+1:]), 10, 64)
 			if err != nil {
-			    panic(fmt.Sprintf("%s could not be converted to uint64", val));
+                panic(fmt.Sprintf("%s could not be converted to uint64", line[split+1:]));
 			}
 			if _, ok := cfg.Parameters[section]; !ok {
 				cfg.Parameters[section] = make(map[string]uint64)
@@ -233,7 +233,7 @@ func RunBenchmark(
     }
 }
 
-func main() {
+func benchmark() {
 
     if len(os.Args) < 2 {
         fmt.Printf("%sno parameter file specified%s\n", RED, RESET)

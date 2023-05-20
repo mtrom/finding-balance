@@ -15,7 +15,7 @@ import (
 func RunBoth(dbFn, queriesFn, outputFn string) {
     protocol, params, db, bucketSize := SetupProtocolAndDB(dbFn)
 
-    queries := ReadQueries(queriesFn)
+    _, queries := ReadDatabase[uint64, uint64](queriesFn)
     RunProtocol(&protocol, db, *params, queries, bucketSize)
 }
 
@@ -79,10 +79,10 @@ func main() {
         params   := make([]PSIParams, *cuckooN)
 
         for i := int64(0); i < *cuckooN; i++ {
-            queries[i] = ReadQueries(
+            _, queries[i] = ReadDatabase[uint64, uint64](
                 fmt.Sprintf("%s%d%s", CLIENT_QUERY_PREFIX, i, CLIENT_QUERY_SUFFIX),
             )
-            _, oprfs[i] = ReadDatabase[byte](
+            _, oprfs[i] = ReadDatabase[byte, byte](
                 fmt.Sprintf("%s%d%s", CLIENT_OPRF_PREFIX, i, CLIENT_OPRF_SUFFIX),
             )
             params[i] = psiParams

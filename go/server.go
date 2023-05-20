@@ -30,7 +30,7 @@ var mutex sync.Mutex
 func RunServer(queries uint64, psiParams *PSIParams) {
 
     // read in encrypted database from file
-    metadata, values := ReadDatabase[uint64](SERVER_DATABASE, "bucketSize")
+    metadata, values := ReadDatabase[byte, uint64](SERVER_DATABASE, "bucketSize")
 
     psiParams.BucketSize = metadata["bucketSize"]
 
@@ -235,7 +235,7 @@ func ReadServerInputs(
     psiParams PSIParams,
 ) ([][]uint64, []PSIParams ) {
     if cuckooN == 1 {
-        metadata, dataset := ReadDatabase[uint64](SERVER_DATABASE, "bucketSize")
+        metadata, dataset := ReadDatabase[byte, uint64](SERVER_DATABASE, "bucketSize")
 
         psiParams.BucketSize = metadata["bucketSize"]
 
@@ -252,7 +252,7 @@ func ReadServerInputs(
     datasets := make([][]uint64, cuckooN)
     params   := make([]PSIParams, cuckooN)
     for i := int64(0); i < cuckooN; i++ {
-        metadata, values := ReadDatabase[uint64](
+        metadata, values := ReadDatabase[byte, uint64](
             fmt.Sprintf("%s%d%s", SERVER_DATABASE_PREFIX, i, SERVER_DATABASE_SUFFIX),
             "bucketSize",
         )
