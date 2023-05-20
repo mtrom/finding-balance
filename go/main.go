@@ -1,7 +1,6 @@
 package main
 
 import (
-    "encoding/binary"
     "flag"
     "fmt"
     "io/ioutil"
@@ -79,12 +78,6 @@ func main() {
         }
 
     } else if *server {
-        if *cuckooN == 1 {
-            if *queries_log == -1 { fmt.Println("expected --queries-log argument"); os.Exit(1) }
-            RunServer(1 << *queries_log, &psiParams)
-            os.Exit(0)
-        }
-
         // connect to client
         var client net.Conn
         for i := 0; i < CONNECTION_RETRIES; i++ {
@@ -95,55 +88,13 @@ func main() {
         }
         defer client.Close()
 
-        datasets, params := ReadServerInputs(*cuckooN, psiParams)
-
-        timer := StartTimer("[ server ] pir offline", RED)
-        states := make([]ServerState, *cuckooN)
-
-        if psiParams.Threads == 1 {
-            payloads := make([][]byte, *cuckooN)
-            for i, dataset := range datasets {
-                result := RunServerOffline(&params[i], dataset)
-                states[i] = result.state
-                payloads[i] = result.payload
-            }
-
-            // let the client know we're ready for offline
-            ready := []byte{1}
-            client.Write(ready)
-
-            for i, payload := range payloads {
-                err := binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
-                if err != nil { panic(err) }
-                WriteOverNetwork(client, payload)
-            }
-        } else {
-            channels := make([]chan ServerOfflineResult, *cuckooN)
-            for i := range datasets {
-                channels[i] = make(chan ServerOfflineResult)
-                go func(i int) {
-                    channels[i] <- RunServerOffline(&params[i], datasets[i])
-                }(i)
-            }
-
-            // let the client know we're ready for offline
-            ready := []byte{1}
-            client.Write(ready)
-
-            for i, channel := range channels {
-                result := <-channel
-                states[i] = result.state
-                err := binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
-                if err != nil { panic(err) }
-                WriteOverNetwork(client, result.payload)
-            }
+        queries := uint64(0)
+        if *queries_log != -1 {
+            queries = 1 << *queries_log
         }
-        timer.End()
 
-        timer = StartTimer("[ server ] pir online", RED)
-        RunServerOnline(states, client, psiParams.Threads)
-        timer.End()
-
+        // run protocol
+        RunServer(&psiParams, client, queries)
     } else {
         fmt.Println("expected `client` or `server` subcommand")
         os.Exit(1)

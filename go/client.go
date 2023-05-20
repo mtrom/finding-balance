@@ -66,6 +66,10 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
         timer.End()
         ////////////////////////////////////////////////
 
+        // let the server know we're ready for online
+        ready = []byte{1}
+        server.Write(ready)
+
         //////////////////// ONLINE ////////////////////
         timer = StartTimer("[ client ] pir online", BLUE)
         for i := uint64(0); i < psiParams.CuckooN; i++ {
@@ -85,10 +89,7 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
 /**
  * download hint / lwe matrix and compute parameters
  */
-func CreateClientState(
-    psiParams *PSIParams,
-    server net.Conn,
-) *ClientState {
+func CreateClientState(psiParams *PSIParams, server net.Conn) *ClientState {
     // read bucket size from server
     err := binary.Read(server, binary.LittleEndian, &psiParams.BucketSize)
     if err != nil { panic(err) }

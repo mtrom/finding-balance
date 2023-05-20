@@ -9,7 +9,7 @@ import (
     "os/exec"
     "strconv"
     "strings"
-    "time"
+    // "time"
 )
 
 const DEFAULT_TRIALS = 10
@@ -178,6 +178,7 @@ func RunBenchmark(
     benchmarkName string,
     fn func([][]uint64, *PSIParams, net.Conn),
 ) {
+    /*
     averages := make([]float64, len(cfg.Sections))
     minimums := make([]float64, len(cfg.Sections))
     maximums := make([]float64, len(cfg.Sections))
@@ -292,4 +293,5 @@ func benchmark() {
             }
         },
     )
+    */
 }

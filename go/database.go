@@ -123,4 +123,3 @@ func SetupDBInfo(psiParams *PSIParams, entryBits uint64, params *Params) (DBinfo
 
     return info
 }
-
