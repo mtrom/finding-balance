@@ -15,11 +15,7 @@ const (
     CLIENT_OPRF_RESULT  = "out/client.edb"
     CLIENT_QUERIES      = "out/queries.db"
 
-    // running with cuckoo
-    CLIENT_QUERY_PREFIX = "out/"
-    CLIENT_QUERY_SUFFIX = "/queries.db"
-    CLIENT_OPRF_PREFIX  = "out/"
-    CLIENT_OPRF_SUFFIX  = "/client.edb"
+    BLANK_QUERY = ^uint64(0)
 )
 
 /**
@@ -255,7 +251,13 @@ func RunClientOnline(
     var paddingElement [ENTRY_SIZE]byte
     cols := make([][]byte, len(responses))
     for i, response := range responses {
-        // if we've already queried this column, don't bother recovering
+
+        // if this is an empty cuckoo bucket, don't bother recovering
+        if indices[i] == BLANK_QUERY {
+            fmt.Printf("not reconstructing %d\n", i)
+            continue;
+        }
+
         answer := BytesToMatrix(response, states[i].params.L, 1)
 
         // reconstruct the data based on the answer

@@ -1,5 +1,7 @@
 #include "cuckoo.h"
 
+#include <limits>
+
 namespace unbalanced_psi {
 
     u64 cuckoo_hash(const vector<u8>& entry, u64 hash_n, u64 table_size) {
@@ -74,7 +76,7 @@ namespace unbalanced_psi {
     }
 
     tuple<vector<hash_type>, vector<u64>> CuckooVector::split() {
-        u64 BLANK_QUERY = 0;
+        u64 BLANK_QUERY = std::numeric_limits<u64>::max();
         hash_type BLANK_RESULT = hash_type(HASH_3_SIZE, 0);
 
         vector<hash_type> results;

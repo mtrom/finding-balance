@@ -12,13 +12,6 @@ import (
     "runtime"
 )
 
-func RunBoth(dbFn, queriesFn, outputFn string) {
-    protocol, params, db, bucketSize := SetupProtocolAndDB(dbFn)
-
-    _, queries := ReadDatabase[uint64, uint64](queriesFn)
-    RunProtocol(&protocol, db, *params, queries, bucketSize)
-}
-
 func main() {
     log.SetOutput(ioutil.Discard)
 
@@ -40,7 +33,7 @@ func main() {
     expected := flag.Int64("expected", -1, "expected size of intersection")
 
     // server-only flag
-    queries := flag.Int64("queries-log", -1, "log of the number of pir queries")
+    queries_log := flag.Int64("queries-log", -1, "log of the number of pir queries")
 
     flag.Parse()
 
@@ -74,17 +67,15 @@ func main() {
         server, err := connection.Accept()
         if err != nil { panic(err) }
 
-        queries  := make([][]uint64, *cuckooN)
-        oprfs    := make([][]byte, *cuckooN)
         params   := make([]PSIParams, *cuckooN)
 
+        // read in query indices
+        _, queries := ReadDatabase[uint64, uint64](CLIENT_QUERIES)
+
+        // read in result of oprf
+        _, oprf := ReadDatabase[byte, byte](CLIENT_OPRF_RESULT)
+
         for i := int64(0); i < *cuckooN; i++ {
-            _, queries[i] = ReadDatabase[uint64, uint64](
-                fmt.Sprintf("%s%d%s", CLIENT_QUERY_PREFIX, i, CLIENT_QUERY_SUFFIX),
-            )
-            _, oprfs[i] = ReadDatabase[byte, byte](
-                fmt.Sprintf("%s%d%s", CLIENT_OPRF_PREFIX, i, CLIENT_OPRF_SUFFIX),
-            )
             params[i] = psiParams
         }
 
@@ -98,9 +89,14 @@ func main() {
         timer = StartTimer("[ client ] pir online", BLUE)
         indices := make([]uint64, *cuckooN)
         for i, query := range queries {
-            // translate the hash value into the column by dividing by the number
-            // of buckets per column
-            indices[i] = query[0] / params[i].BucketsPerCol
+            if query == BLANK_QUERY {
+                // don't translate blank queries so we can still identify them
+                indices[i] = query;
+            } else {
+                // translate the hash value into the column by dividing by the number
+                // of buckets per column
+                indices[i] = query / params[i].BucketsPerCol
+            }
         }
 
         var results [][]byte
@@ -124,10 +120,8 @@ func main() {
         found := int64(0)
         for c := int64(0); c < *cuckooN; c++ {
             for i := 0; i < len(results[c]); i += ENTRY_SIZE {
-                for j := 0; j < len(oprfs[c]); j += ENTRY_SIZE {
-                    if bytes.Equal(results[c][i:i+ENTRY_SIZE], oprfs[c][j:j+ENTRY_SIZE]) {
-                        found++
-                    }
+                if bytes.Equal(results[c][i:i+ENTRY_SIZE], oprf[c*ENTRY_SIZE:(c+1)*ENTRY_SIZE]) {
+                    found++
                 }
             }
         }
@@ -141,8 +135,8 @@ func main() {
 
     } else if *server {
         if *cuckooN == -1 {
-            if *queries == -1 { fmt.Println("expected --queries-log argument"); os.Exit(1) }
-            RunServer(1 << *queries, &psiParams)
+            if *queries_log == -1 { fmt.Println("expected --queries-log argument"); os.Exit(1) }
+            RunServer(1 << *queries_log, &psiParams)
             os.Exit(0)
         }
 

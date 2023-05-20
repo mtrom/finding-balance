@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
         client.offline();
         offline.stop();
 
+        // wait for signal that server is ready for online
         vector<u8> ready(1);
         channel.recv(ready.data(), 1);
         channel.resetStats();
@@ -52,26 +53,10 @@ int main(int argc, char *argv[]) {
         channel.close();
         session.stop();
 
-        if (params.cuckoo_size == 1) {
-            write_results(results, CLIENT_ONLINE_OUTPUT);
-            write_dataset(queries, CLIENT_QUERY_OUTPUT);
-            return 0;
-        }
-        for (auto i = 0; i < queries.size(); i++) {
-            write_dataset<u8>(
-                results[i],
-                CLIENT_ONLINE_OUTPUT_PREFIX
-                + std::to_string(i)
-                + CLIENT_ONLINE_OUTPUT_SUFFIX
-            );
-            write_dataset<u64>(
-                queries.data() + i,
-                1,
-                CLIENT_QUERY_OUTPUT_PREFIX
-                + std::to_string(i)
-                + CLIENT_QUERY_OUTPUT_SUFFIX
-            );
-        }
+        // write results to files
+        write_results(results, CLIENT_ONLINE_OUTPUT);
+        write_dataset(queries, CLIENT_QUERY_OUTPUT);
+
     } else if (parser.isSet("server") || parser.isSet("-server")) {
         Server server(SERVER_OFFLINE_INPUT, params);
 
