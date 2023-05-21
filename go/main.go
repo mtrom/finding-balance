@@ -22,10 +22,10 @@ func main() {
     client := flag.Bool("client", false, "run the pir protocol as the client")
     server := flag.Bool("server", false, "run the pir protocol as the server")
 
-    bucketN       := flag.Int64("bucket-n", -1, "total number of buckets in server's hash table")
+    hashtableSize := flag.Int64("hashtable-size", -1, "total number of buckets in server's hash table")
     bucketsPerCol := flag.Int64("buckets-per-col", -1, "number of buckets in a col of the database")
     threads       := flag.Uint("threads", 1, "number of threads to run at once")
-    cuckooN       := flag.Int64("cuckoo-n", 1, "total number of buckets in server's hash table")
+    cuckooSize    := flag.Int64("cuckoo-size", 1, "total number of buckets in server's hash table")
 
     // optional lwe options
     lweN     := flag.Int64("lwe-n", -1, "lwe secret dimension")
@@ -37,15 +37,16 @@ func main() {
 
     // server-only flag
     queries_log := flag.Int64("queries-log", -1, "log of the number of pir queries")
+    queries     := flag.Int64("queries", -1, "the number of pir queries")
 
     flag.Parse()
 
-    if *bucketN == -1 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
+    if *hashtableSize == -1 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
     if *bucketsPerCol == -1 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
 
     psiParams := PSIParams{
-        CuckooN: uint64(*cuckooN),
-        BucketN: uint64(*bucketN),
+        CuckooSize: uint64(*cuckooSize),
+        HashtableSize: uint64(*hashtableSize),
         BucketSize: 0,
         BucketsPerCol: uint64(*bucketsPerCol),
         Threads: *threads,
@@ -95,13 +96,12 @@ func main() {
         }
         defer client.Close()
 
-        queries := uint64(0)
         if *queries_log != -1 {
-            queries = 1 << *queries_log
+            *queries = 1 << *queries_log
         }
 
         // run protocol
-        RunServer(&psiParams, client, queries)
+        RunServer(&psiParams, client, uint64(*queries))
     } else {
         fmt.Println("expected `client` or `server` subcommand")
         os.Exit(1)

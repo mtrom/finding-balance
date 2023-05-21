@@ -8,8 +8,8 @@ import (
  * parameters of the greater psi protocol
  */
 type PSIParams struct {
-    CuckooN       uint64 // number of buckets in cuckoo hashing table
-    BucketN       uint64 // number of buckets in server's hash table
+    CuckooSize    uint64 // number of buckets in cuckoo hashing table
+    HashtableSize uint64 // number of buckets in server's hash table
     BucketSize    uint64 // size of each bucket in _bytes_
     BucketsPerCol uint64 // number of buckets in a col of the pir database
     Threads       uint   // number of threads to run at a time
@@ -24,7 +24,7 @@ type PSIParams struct {
  * given psi params, size of the encrypted database in bytes
  */
 func (p* PSIParams) DBBytes() uint64 {
-    return p.BucketN * p.BucketSize
+    return p.HashtableSize * p.BucketSize
 }
 
 /**

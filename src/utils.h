@@ -31,9 +31,6 @@ namespace unbalanced_psi {
         // number of buckets in the cuckoo table
         u64 cuckoo_size;
 
-        // size of each bucket in the cuckoo table
-        u64 cuckoo_pad;
-
         // number of hashes to use in the cuckoo table
         u64 cuckoo_hashes;
 
@@ -47,12 +44,12 @@ namespace unbalanced_psi {
 
         // when not using a cuckoo table
         PSIParams(u64 hsize, int th) :
-            cuckoo_size(1), cuckoo_pad(0), cuckoo_hashes(0),
+            cuckoo_size(1), cuckoo_hashes(0),
             hashtable_size(hsize), threads(th) { }
 
         // when using a cuckoo table
-        PSIParams(u64 csize, u64 cpad, u64 chashes, u64 hsize, int th) :
-            cuckoo_size(csize), cuckoo_pad(cpad), cuckoo_hashes(chashes),
+        PSIParams(u64 csize, u64 chashes, u64 hsize, int th) :
+            cuckoo_size(csize), cuckoo_hashes(chashes),
             hashtable_size(hsize), threads(th) { }
     };
 

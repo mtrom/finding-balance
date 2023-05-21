@@ -41,7 +41,7 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
     timer := StartTimer("[ client ] pir offline", BLUE)
 
     /////////////////// OFFLINE ////////////////////
-    if psiParams.CuckooN == 1 {
+    if psiParams.CuckooSize == 1 {
         state := CreateClientState(psiParams, server)
         // need a copy of the state for each query
         for _ = range queries {
@@ -49,7 +49,7 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
             states = append(states, &cpy)
         }
     } else {
-        for i := uint64(0); i < psiParams.CuckooN; i++ {
+        for i := uint64(0); i < psiParams.CuckooSize; i++ {
             states = append(states, CreateClientState(psiParams, server))
         }
     }

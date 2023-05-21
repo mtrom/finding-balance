@@ -12,7 +12,6 @@ namespace unbalanced_psi {
         Point::MakeRandomNonzeroScalar(key);
 
 
-        Timer timer("[ server ] encrypt & hash", GREEN);
         // calculate the encrypted hash for each input
         vector<hash_type> output;
         if (params.threads == 1) {
@@ -37,16 +36,13 @@ namespace unbalanced_psi {
                 output.insert(output.end(), partial.begin(), partial.end());
             }
         }
-        timer.stop();
 
-        timer = Timer("[ server ] organize", GREEN);
         if (params.cuckoo_size == 1) {
             Hashtable hashtable(params.hashtable_size);
             for (auto i = 0; i < output.size(); i++) {
                 hashtable.insert(output[i]);
             }
             hashtable.pad();
-            timer.stop();
             return vector<Hashtable>{hashtable};
         } else {
             CuckooTable cuckoo(params);
@@ -54,7 +50,6 @@ namespace unbalanced_psi {
                 cuckoo.insert(output[i]);
             }
             cuckoo.pad();
-            timer.stop();
             return cuckoo.table;
         }
     }

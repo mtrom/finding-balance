@@ -9,11 +9,11 @@ run_protocol() {
     ./bin/datagen --server-log $SERVER_LOG --client-log $CLIENT_LOG --overlap $OVERLAP
 
 
-    ./bin/oprf --server --cuckoo-n $1 --cuckoo-pad $2 --cuckoo-hashes $3 --hashtable-n $4 --threads $6 &
-    ./bin/oprf --client --cuckoo-n $1 --cuckoo-pad $2 --cuckoo-hashes $3 --hashtable-n $4 &
+    ./bin/oprf --server --cuckoo-size $1 --cuckoo-hashes $3 --hashtable-size $4 --threads $6 &
+    ./bin/oprf --client --cuckoo-size $1 --cuckoo-hashes $3 --hashtable-size $4 &
     wait
-    ./bin/pir  --client --cuckoo-n $1 --bucket-n $4 --buckets-per-col $5 --expected $OVERLAP &
-    ./bin/pir  --server --cuckoo-n $1 --bucket-n $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 &
+    ./bin/pir  --client --cuckoo-size $1 --hashtable-size $4 --buckets-per-col $5 --expected $OVERLAP &
+    ./bin/pir  --server --cuckoo-size $1 --hashtable-size $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 &
     wait
     set +e
 }

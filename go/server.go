@@ -38,7 +38,7 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     timer := StartTimer("[ server ] pir offline", RED)
     var states []*ServerState
 
-    if psiParams.CuckooN == 1 {
+    if psiParams.CuckooSize == 1 {
         states = make([]*ServerState, queries)
         state := CreateServerState(&params[0], datasets[0])
         // need a refernece to the state for each query
@@ -46,12 +46,12 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
             states[i] = state
         }
     } else if psiParams.Threads == 1 {
-        states = make([]*ServerState, psiParams.CuckooN)
+        states = make([]*ServerState, psiParams.CuckooSize)
         for i := range datasets {
             states[i] = CreateServerState(&params[i], datasets[i])
         }
     } else {
-        states = make([]*ServerState, psiParams.CuckooN)
+        states = make([]*ServerState, psiParams.CuckooSize)
         var waitGroup sync.WaitGroup
         for i := range datasets {
             waitGroup.Add(1)
@@ -67,7 +67,7 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     ready := []byte{1}
     client.Write(ready)
 
-    for i := uint64(0); i < psiParams.CuckooN; i++ {
+    for i := uint64(0); i < psiParams.CuckooSize; i++ {
         err := binary.Write(client, binary.LittleEndian, &states[i].BucketSize)
         if err != nil { panic(err) }
         WriteOverNetwork(client, states[i].Offline)
@@ -174,12 +174,12 @@ func (state* ServerState) AnswerQuery(request []byte) []byte {
 }
 
 func ReadServerInputs(psiParams PSIParams) ([][]uint64, []PSIParams ) {
-    datasets := make([][]uint64, psiParams.CuckooN)
-    params   := make([]PSIParams, psiParams.CuckooN)
+    datasets := make([][]uint64, psiParams.CuckooSize)
+    params   := make([]PSIParams, psiParams.CuckooSize)
 
-    for i := uint64(0); i < psiParams.CuckooN; i++ {
+    for i := uint64(0); i < psiParams.CuckooSize; i++ {
         filename := SERVER_DATABASE
-        if (psiParams.CuckooN > 1) {
+        if (psiParams.CuckooSize > 1) {
             filename = fmt.Sprintf(
                 "%s%d%s", SERVER_DATABASE_PREFIX, i, SERVER_DATABASE_SUFFIX,
             )

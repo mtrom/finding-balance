@@ -43,7 +43,7 @@ namespace unbalanced_psi {
         u64 HASHES = 3;
 
         PSIParams PARAMS(
-            CUCKOO_N, 0, HASHES, 10, 1
+            CUCKOO_N, HASHES, 10, 1
         );
 
         CuckooTable cuckoo(PARAMS);
@@ -69,7 +69,7 @@ namespace unbalanced_psi {
         auto MANY = 100;
 
         PSIParams PARAMS(
-            CUCKOO_N, 0, HASHES, 10, 1
+            CUCKOO_N, HASHES, 10, 1
         );
 
         CuckooTable cuckoo(PARAMS);
@@ -96,7 +96,7 @@ namespace unbalanced_psi {
         u64 HASHES = 3;
 
         PSIParams PARAMS(
-            CUCKOO_N, 0, HASHES, 10, 1
+            CUCKOO_N, HASHES, 10, 1
         );
 
         CuckooVector cuckoo(PARAMS);
@@ -121,7 +121,7 @@ namespace unbalanced_psi {
         auto MANY = 10;
 
         PSIParams PARAMS(
-            CUCKOO_N, 0, HASHES, 10, 1
+            CUCKOO_N, HASHES, 10, 1
         );
 
         CuckooVector cuckoo(PARAMS);
@@ -148,7 +148,7 @@ namespace unbalanced_psi {
         auto MANY = 100;
 
         PSIParams PARAMS(
-            CUCKOO_N, 0, HASHES, 10, 1
+            CUCKOO_N, HASHES, 10, 1
         );
 
         CuckooVector cuckoo(PARAMS);

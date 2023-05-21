@@ -16,10 +16,9 @@ int main(int argc, char *argv[]) {
     }
 
     auto params = PSIParams(
-        parser.get<u64>("-cuckoo-n"),
-        parser.get<u64>("-cuckoo-pad"),
+        parser.get<u64>("-cuckoo-size"),
         parser.get<u64>("-cuckoo-hashes"),
-        parser.get<u64>("-hashtable-n"),
+        parser.get<u64>("-hashtable-size"),
         parser.getOr<int>("-threads", 1)
     );
 
