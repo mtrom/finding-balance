@@ -10,15 +10,10 @@ run_protocol() {
 
 
     ./bin/oprf --server --cuckoo-n $1 --cuckoo-pad $2 --cuckoo-hashes $3 --hashtable-n $4 --threads $6 &
-    ./bin/oprf --client --cuckoo-n $1 --cuckoo-pad $2 --cuckoo-hashes $3 --hashtable-n $4 --threads $6 &
+    ./bin/oprf --client --cuckoo-n $1 --cuckoo-pad $2 --cuckoo-hashes $3 --hashtable-n $4 &
     wait
-    if [ $1 -gt 1 ]; then
-        ./bin/pir  --client --cuckoo-n $1 --bucket-n $4 --buckets-per-col $5 --expected $OVERLAP --threads $6 &
-        ./bin/pir  --server --cuckoo-n $1 --bucket-n $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 &
-    else
-        ./bin/pir  --client --bucket-n $4 --buckets-per-col $5 --expected $OVERLAP --threads $6 &
-        ./bin/pir  --server --bucket-n $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 &
-    fi
+    ./bin/pir  --client --cuckoo-n $1 --bucket-n $4 --buckets-per-col $5 --expected $OVERLAP &
+    ./bin/pir  --server --cuckoo-n $1 --bucket-n $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 &
     wait
     set +e
 }

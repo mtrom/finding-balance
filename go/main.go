@@ -25,8 +25,12 @@ func main() {
     bucketN       := flag.Int64("bucket-n", -1, "total number of buckets in server's hash table")
     bucketsPerCol := flag.Int64("buckets-per-col", -1, "number of buckets in a col of the database")
     threads       := flag.Uint("threads", 1, "number of threads to run at once")
-
     cuckooN       := flag.Int64("cuckoo-n", 1, "total number of buckets in server's hash table")
+
+    // optional lwe options
+    lweN     := flag.Int64("lwe-n", -1, "lwe secret dimension")
+    lweSigma := flag.Float64("lwe-sigma", -1, "lwe error distribution std dev")
+    modulus  := flag.Int64("mod", -1, "lwe plaintext modulus")
 
     // client-only flag
     expected := flag.Int64("expected", -1, "expected size of intersection")
@@ -45,6 +49,9 @@ func main() {
         BucketSize: 0,
         BucketsPerCol: uint64(*bucketsPerCol),
         Threads: *threads,
+        LweN: *lweN,
+        LweSigma: *lweSigma,
+        Modulus: *modulus,
     }
 
     // limit the number of threads

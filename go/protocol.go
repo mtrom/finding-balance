@@ -13,6 +13,11 @@ type PSIParams struct {
     BucketSize    uint64 // size of each bucket in _bytes_
     BucketsPerCol uint64 // number of buckets in a col of the pir database
     Threads       uint   // number of threads to run at a time
+
+    // (optional) provide to manually choose lwe params
+    LweN     int64
+    LweSigma float64
+    Modulus  int64
 }
 
 /**
@@ -25,22 +30,38 @@ func (p* PSIParams) DBBytes() uint64 {
 /**
  * get appropriate parameters based on database & lwe information
  *  modified from pir.SimplePIR.PickParams() to factor in bucket size
+ *  and allow manual parameter setting
  *
  * @param <psiParams> params of the greater psi protocol
  * @param <entryBits> number of bits to represent an entry
- * @param <lweParam> security parameter for lwe
- * @param <lweMod> modulo for lwe and used to help find error distribution
  */
-func GetParams(psiParams *PSIParams, entryBits, lweParam, lweMod uint64) (*Params) {
+func GetParams(psiParams *PSIParams, entryBits uint64) (*Params) {
     var params *Params = nil
+
+    // default LWE params
+    const LOGQ = uint64(32)
+    const SEC_PARAM = uint64(1 << 10)
+
+    // if we're manually setting the lwe params
+    if psiParams.LweN != -1 {
+        rows, cols := GetDatabaseDims(psiParams, entryBits, uint64(psiParams.Modulus))
+        return &Params{
+            N: uint64(psiParams.LweN),
+            Sigma: psiParams.LweSigma,
+            L: rows,
+            M: cols,
+            Logq: LOGQ,
+            P: uint64(psiParams.Modulus),
+        }
+    }
 
     // iteratively refine plaintext modulo to find tight values
     for ptMod := uint64(2); ; ptMod += 1 {
         rows, cols := GetDatabaseDims(psiParams, entryBits, ptMod)
 
         candidate := Params{
-            N:    lweParam,
-            Logq: lweMod,
+            N:    SEC_PARAM,
+            Logq: LOGQ,
             L:    rows,
             M:    cols,
         }
@@ -70,14 +91,10 @@ func GetParams(psiParams *PSIParams, entryBits, lweParam, lweMod uint64) (*Param
  */
 func SetupProtocol(psiParams *PSIParams) (SimplePIR, *Params, uint64) {
 
-    // LWE params
-    const LOGQ = uint64(32)
-    const SEC_PARAM = uint64(1 << 10)
-
     // bits per database `element'
     const ENTRY_BITS = uint64(8)
 
-    params := GetParams(psiParams, ENTRY_BITS, SEC_PARAM, LOGQ)
+    params := GetParams(psiParams, ENTRY_BITS)
     protocol := SimplePIR{}
 
     return protocol, params, ENTRY_BITS
