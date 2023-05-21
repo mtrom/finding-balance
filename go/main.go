@@ -72,7 +72,7 @@ func main() {
         } else {
             fmt.Printf(
                 "%s>>>>>>>>> FAILURE [%d vs %d] >>>>>>>>>%s\n",
-                RED, actual, expected, RESET,
+                RED, actual, *expected, RESET,
             )
             os.Exit(1)
         }

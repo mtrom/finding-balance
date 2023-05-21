@@ -36,13 +36,22 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     ///////////////////////// OFFLINE /////////////////////////
 
     timer := StartTimer("[ server ] pir offline", RED)
-    states := make([]*ServerState, psiParams.CuckooN)
+    var states []*ServerState
 
-    if psiParams.Threads == 1 {
+    if psiParams.CuckooN == 1 {
+        states = make([]*ServerState, queries)
+        state := CreateServerState(&params[0], datasets[0])
+        // need a refernece to the state for each query
+        for i := uint64(0); i < queries; i++ {
+            states[i] = state
+        }
+    } else if psiParams.Threads == 1 {
+        states = make([]*ServerState, psiParams.CuckooN)
         for i := range datasets {
             states[i] = CreateServerState(&params[i], datasets[i])
         }
     } else {
+        states = make([]*ServerState, psiParams.CuckooN)
         var waitGroup sync.WaitGroup
         for i := range datasets {
             waitGroup.Add(1)
@@ -58,10 +67,10 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     ready := []byte{1}
     client.Write(ready)
 
-    for i, state := range states {
-        err := binary.Write(client, binary.LittleEndian, &params[i].BucketSize)
+    for i := uint64(0); i < psiParams.CuckooN; i++ {
+        err := binary.Write(client, binary.LittleEndian, &states[i].BucketSize)
         if err != nil { panic(err) }
-        WriteOverNetwork(client, state.Offline)
+        WriteOverNetwork(client, states[i].Offline)
     }
 
     timer.End()
@@ -74,15 +83,8 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
 
     ////////////////////////// ONLINE /////////////////////////
 
-    if psiParams.CuckooN == 1 {
-        timer = StartTimer("[ server ] pir online", RED)
-        for i := uint64(0); i < queries; i++ {
-            request := ReadOverNetwork(client, states[0].QuerySize * ELEMENT_SIZE)
-            response := states[0].AnswerQuery(request)
-            WriteOverNetwork(client, response)
-        }
-    } else if psiParams.Threads == 1 {
-        requests := make([][]byte, psiParams.CuckooN)
+    if psiParams.Threads == 1 {
+        requests := make([][]byte, len(states))
         for i, state := range states {
             requests[i] = ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
         }
@@ -91,7 +93,7 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
             WriteOverNetwork(client, response)
         }
     } else {
-        channels := make([]chan []byte, psiParams.CuckooN)
+        channels := make([]chan []byte, len(states))
         for i, state := range states {
             request := ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
             channels[i] = make(chan []byte)
@@ -105,17 +107,16 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
             WriteOverNetwork(client, response)
         }
     }
-
-    timer.End()
     ///////////////////////////////////////////////////////////
 }
 
 type ServerState struct {
-    Params      *Params
-    DB          *Database
-    QuerySize   uint64
-    LweMatrix   State
-    Offline     []byte
+    Params     *Params
+    DB         *Database
+    QuerySize  uint64
+    BucketSize uint64
+    LweMatrix  State
+    Offline    []byte
 }
 
 func CreateServerState(psiParams *PSIParams, dataset []uint64) *ServerState {
@@ -153,6 +154,7 @@ func CreateServerState(psiParams *PSIParams, dataset []uint64) *ServerState {
         Params: params,
         DB: db,
         QuerySize: querySize,
+        BucketSize: psiParams.BucketSize,
         LweMatrix: lweMatrix,
         Offline: offline,
     }

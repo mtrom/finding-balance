@@ -37,54 +37,59 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
     server.Read(ready)
 
     found := int64(0)
+    states := make([]*ClientState, 0)
+    timer := StartTimer("[ client ] pir offline", BLUE)
+
+    /////////////////// OFFLINE ////////////////////
     if psiParams.CuckooN == 1 {
-        /////////////////// OFFLINE ////////////////////
-        timer := StartTimer("[ client ] pir offline", BLUE)
         state := CreateClientState(psiParams, server)
-        timer.End()
-        ////////////////////////////////////////////////
-
-        // let the server know we're ready for online
-        ready = []byte{1}
-        server.Write(ready)
-
-        //////////////////// ONLINE ////////////////////
-        timer = StartTimer("[ client ] pir online", BLUE)
-        for _, query := range queries {
-            state.SendQuery(query, server)
-            found += state.ReadResponse(oprf, server)
+        // need a copy of the state for each query
+        for _ = range queries {
+            cpy := *state
+            states = append(states, &cpy)
         }
-        timer.End()
-        ////////////////////////////////////////////////
     } else {
-        /////////////////// OFFLINE ////////////////////
-        timer := StartTimer("[ client ] pir offline", BLUE)
-        states := make([]*ClientState, psiParams.CuckooN)
         for i := uint64(0); i < psiParams.CuckooN; i++ {
-            states[i] = CreateClientState(psiParams, server)
+            states = append(states, CreateClientState(psiParams, server))
         }
-        timer.End()
-        ////////////////////////////////////////////////
-
-        // let the server know we're ready for online
-        ready = []byte{1}
-        server.Write(ready)
-
-        //////////////////// ONLINE ////////////////////
-        timer = StartTimer("[ client ] pir online", BLUE)
-        for i := uint64(0); i < psiParams.CuckooN; i++ {
-            states[i].SendQuery(queries[i], server)
-        }
-        for i := uint64(0); i < psiParams.CuckooN; i++ {
-            found += states[i].ReadResponse(
-                oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE], server,
-            )
-        }
-        timer.End()
-        ////////////////////////////////////////////////
     }
+    timer.End()
+    ////////////////////////////////////////////////
+
+    // let the server know we're ready for online
+    ready = []byte{1}
+    server.Write(ready)
+
+    //////////////////// ONLINE ////////////////////
+    timer = StartTimer("[ client ] pir online", BLUE)
+    for i, state := range states {
+        state.SendQuery(queries[i], server)
+    }
+    for i, state := range states {
+        found += state.ReadResponse(
+            oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE], server,
+        )
+    }
+    timer.End()
+    ////////////////////////////////////////////////
+
     return found
 }
+
+/**
+ * holds info between offline and online
+ */
+type ClientState struct {
+    Params        *Params
+    BucketsPerCol uint64
+    DBInfo        DBinfo
+    Hint          *Matrix
+    LweMatrix     State
+    Secret        *State
+    Query         *Msg
+    SkipRecover   bool
+}
+
 
 /**
  * download hint / lwe matrix and compute parameters
@@ -120,20 +125,6 @@ func CreateClientState(psiParams *PSIParams, server net.Conn) *ClientState {
         Query: nil,
         SkipRecover: false,
     }
-}
-
-/**
- * holds info between offline and online
- */
-type ClientState struct {
-    Params        *Params
-    BucketsPerCol uint64
-    DBInfo        DBinfo
-    Hint          *Matrix
-    LweMatrix     State
-    Secret        *State
-    Query         *Msg
-    SkipRecover   bool
 }
 
 /**
@@ -198,10 +189,8 @@ func (state* ClientState) ReadResponse(oprf []byte, server net.Conn) int64 {
     // find intersection between oprf and pir results
     intersection := int64(0)
     for i := 0; i < len(results); i += ENTRY_SIZE {
-        for j := 0; j < len(oprf); j += ENTRY_SIZE {
-            if bytes.Equal(results[i:i+ENTRY_SIZE], oprf[j:j+ENTRY_SIZE]) {
-                intersection++;
-            }
+        if bytes.Equal(results[i:i+ENTRY_SIZE], oprf) {
+            intersection++;
         }
     }
 
