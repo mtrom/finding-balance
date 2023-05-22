@@ -36,11 +36,10 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
     ready := make([]byte, 1)
     server.Read(ready)
 
+    /////////////////// OFFLINE ////////////////////
+    timer := StartTimer("[ client ] pir offline", YELLOW)
     found := int64(0)
     states := make([]*ClientState, 0)
-    timer := StartTimer("[ client ] pir offline", YELLOW)
-
-    /////////////////// OFFLINE ////////////////////
     if psiParams.CuckooSize == 1 {
         state := CreateClientState(psiParams, server)
         // need a copy of the state for each query

@@ -1,4 +1,3 @@
-#include <fstream>
 #include <cryptoTools/Common/CLP.h>
 
 #include "client.h"
@@ -9,11 +8,6 @@ using namespace unbalanced_psi;
 int main(int argc, char *argv[]) {
     osuCrypto::CLP parser;
 	parser.parse(argc, argv);
-
-    if (!parser.isSet("-debug")) {
-        std::ofstream nullstream;
-        std::clog.rdbuf(nullstream.rdbuf());
-    }
 
     auto params = PSIParams(
         parser.get<u64>("-cuckoo-size"),

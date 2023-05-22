@@ -1,5 +1,3 @@
-#include <fstream>
-
 #include <cryptoTools/Common/TestCollection.h>
 
 #include "test_cuckoo.h"
@@ -9,10 +7,6 @@
 using namespace unbalanced_psi;
 
 int main() {
-
-    // turn off any debugging logs
-    std::ofstream nullstream;
-    std::clog.rdbuf(nullstream.rdbuf());
 
     osuCrypto::TestCollection tests([](osuCrypto::TestCollection& th) {
         th.add("test_generate_datasets_overlap    ", test_generate_datasets_overlap);

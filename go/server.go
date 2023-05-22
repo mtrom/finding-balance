@@ -71,6 +71,10 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     }
     os.Stdout = tmp
 
+    timer.End()
+
+    ///////////////////////////////////////////////////////////
+
     // let the client know we're ready to send the hint
     ready := []byte{1}
     client.Write(ready)
@@ -83,10 +87,6 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
         comm += UINT64_SIZE
         comm += len(states[i].Offline)
     }
-
-    timer.End()
-
-    ///////////////////////////////////////////////////////////
 
     fmt.Printf("[  both  ] hint comm (MB)\t: %.3f\n", float64(comm) / 1000000)
 

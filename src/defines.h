@@ -25,7 +25,6 @@ namespace unbalanced_psi {
     using std::vector;
     using std::future;
     using std::string;
-    using std::map;
 
     // datatypes from osuCrypto
     using u64   = osuCrypto::u64;
