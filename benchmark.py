@@ -33,10 +33,13 @@ def main(fn):
     for name in config:
         if name == "DEFAULT": continue
         print(name)
-        file = open(f"logs/{fname}/{name}.log", "w")
+        file = open(f"logs/{fname}/{name}.log", "r" if from_logs else "w")
         for i in range(config[name].getint("trials")):
-            output = run_protocol(config, name, print_cmds=(i == 0))
-            file.write(output)
+            if not from_logs:
+                output = run_protocol(config, name, print_cmds=(i == 0))
+                file.write(output)
+            else:
+                output = file.read()
             parse_output(output, results[name])
             print(".", end='', flush=True)
         print("")
@@ -180,4 +183,6 @@ def run_protocol(config, name, print_cmds=True):
     return output
 
 if __name__ == "__main__":
+    fn = sys.argv[1]
+    from_logs = len(sys.argv) > 2 and "from-logs" in sys.argv[2]
     main(sys.argv[1])
