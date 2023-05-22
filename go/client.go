@@ -55,10 +55,6 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
     timer.End()
     ////////////////////////////////////////////////
 
-    // let the server know we're ready for online
-    ready = []byte{1}
-    server.Write(ready)
-
     //////////////////// ONLINE ////////////////////
     timer = StartTimer("[ client ] pir online", YELLOW)
     for i, state := range states {
@@ -149,6 +145,10 @@ func (state* ClientState) SendQuery(column uint64, server net.Conn) {
     )
 
     state.Secret, state.Query = &secret, &query
+
+    // let the server know we're ready for online
+    ready = []byte{1}
+    server.Write(ready)
 
     request := MatrixToBytes(state.Query.Data[0])
     WriteOverNetwork(server, request)
