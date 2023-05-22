@@ -110,7 +110,7 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
 
     comm = 0
     timer = StartTimer("[ server ] pir online", BLUE)
-    if psiParams.Threads == 1 {
+    if psiParams.Threads == 1 || len(states) == 1 {
         requests := make([][]byte, len(states))
         for i, state := range states {
             requests[i] = ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
