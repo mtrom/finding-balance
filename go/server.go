@@ -5,6 +5,7 @@ import (
     "encoding/binary"
     "fmt"
     "net"
+    "os"
     "sync"
 
     . "github.com/ahenzinger/simplepir/pir"
@@ -18,6 +19,9 @@ const (
     SERVER_DATABASE_SUFFIX = "/server.edb"
 
     CONNECTION_RETRIES = 5
+
+    // size in bytes
+    UINT64_SIZE = 8
 )
 
 var mutex sync.Mutex
@@ -35,9 +39,12 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
 
     ///////////////////////// OFFLINE /////////////////////////
 
-    timer := StartTimer("[ server ] pir offline", RED)
+    timer := StartTimer("[ server ] pir offline", BLUE)
     var states []*ServerState
 
+    // prevents SetupDB from printing out 'Total packed DB size'
+    tmp := os.Stdout
+    os.Stdout = nil
     if psiParams.CuckooSize == 1 {
         states = make([]*ServerState, queries)
         state := CreateServerState(&params[0], datasets[0])
@@ -62,20 +69,26 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
         }
         waitGroup.Wait()
     }
+    os.Stdout = tmp
 
     // let the client know we're ready to send the hint
     ready := []byte{1}
     client.Write(ready)
 
+    comm := 0
     for i := uint64(0); i < psiParams.CuckooSize; i++ {
         err := binary.Write(client, binary.LittleEndian, &states[i].BucketSize)
         if err != nil { panic(err) }
         WriteOverNetwork(client, states[i].Offline)
+        comm += UINT64_SIZE
+        comm += len(states[i].Offline)
     }
 
     timer.End()
 
     ///////////////////////////////////////////////////////////
+
+    fmt.Printf("[  both  ] hint comm (MB)\t: %.3f\n", float64(comm) / 1000000)
 
     // wait until the client is ready for online
     ready = make([]byte, 1)
@@ -83,19 +96,24 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
 
     ////////////////////////// ONLINE /////////////////////////
 
+    comm = 0
+    timer = StartTimer("[ server ] pir online", BLUE)
     if psiParams.Threads == 1 {
         requests := make([][]byte, len(states))
         for i, state := range states {
             requests[i] = ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
+            comm += len(requests[i])
         }
         for i, state := range states {
             response := state.AnswerQuery(requests[i])
             WriteOverNetwork(client, response)
+            comm += len(response)
         }
     } else {
         channels := make([]chan []byte, len(states))
         for i, state := range states {
             request := ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
+            comm += len(request)
             channels[i] = make(chan []byte)
             go func(i int, request []byte) {
                 res := states[i].AnswerQuery(request)
@@ -105,9 +123,13 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
         for i := range channels {
             response := <-channels[i]
             WriteOverNetwork(client, response)
+            comm += len(response)
         }
     }
+    timer.End()
     ///////////////////////////////////////////////////////////
+
+    fmt.Printf("[  both  ] pir comm (MB)\t: %.3f\n", float64(comm) / 1000000)
 }
 
 type ServerState struct {

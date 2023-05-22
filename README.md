@@ -54,11 +54,8 @@ Check for memory leaks: `valgrind --leak-check=yes ./main`
 
 ```bash
 AWS=<ip address>
-scp -i aws-key.pem deploy.sh ec2-user@$AWS
-ssh -i aws-key.pem ec2-user@$AWS
+scp deploy.sh ec2-user@$AWS:/home/ec2-user/
+ssh ec2-user@$AWS
 ssh-keygen -t ed25519 -C "mtromanhauser@gmail.com" # & add public key to github
-sudo yum install git -y
-git clone git@github.com:mtrom/ddh-unbalanced-psi.git --recursive
-cp ddh-unbalanced-psi/deploy.sh ./
 ./deploy.sh
 ```

@@ -29,8 +29,10 @@ def main(fn):
     for name in config:
         if name == "DEFAULT": continue
         print(name)
+        file = open(f"logs/{name}.log", "w")
         for i in range(config[name].getint("trials")):
             output = run_protocol(config, name, print_cmds=(i == 0))
+            file.write(output)
             parse_output(output, results[name])
             print(".", end='', flush=True)
         print("")
@@ -75,7 +77,9 @@ def report_stat(stats, metric, name, stat, end="\n"):
 
 def parse_output(output, results):
     for line in output.split("\n"):
-        if not re.search('\(.*\)\s*:\s*\d+', line): continue
+        if not re.search('\(.*\)\s*:\s*\d+', line):
+            if "FAILURE" in line: raise Exception("one of the trials failed")
+            continue
         # remove color indicators and extra spacing
         line = re.sub(r"\x1b\[0(;..)?m", "", line)
         line = re.sub("[\t\n]", "", line)

@@ -38,7 +38,7 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
 
     found := int64(0)
     states := make([]*ClientState, 0)
-    timer := StartTimer("[ client ] pir offline", BLUE)
+    timer := StartTimer("[ client ] pir offline", YELLOW)
 
     /////////////////// OFFLINE ////////////////////
     if psiParams.CuckooSize == 1 {
@@ -61,7 +61,7 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
     server.Write(ready)
 
     //////////////////// ONLINE ////////////////////
-    timer = StartTimer("[ client ] pir online", BLUE)
+    timer = StartTimer("[ client ] pir online", YELLOW)
     for i, state := range states {
         state.SendQuery(queries[i], server)
     }

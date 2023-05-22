@@ -13,7 +13,7 @@ run_protocol() {
     ./bin/oprf --client --cuckoo-size $1 --cuckoo-hashes $3 --hashtable-size $4 &
     wait
     ./bin/pir  --client --cuckoo-size $1 --hashtable-size $4 --buckets-per-col $5 --expected $OVERLAP &
-    ./bin/pir  --server --cuckoo-size $1 --hashtable-size $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 &
+    ./bin/pir  --server --cuckoo-size $1 --hashtable-size $4 --buckets-per-col $5 --queries-log $CLIENT_LOG --threads $6 --debug &
     wait
     set +e
 }
@@ -24,82 +24,82 @@ CLIENT_LOG=0
 OVERLAP=1
 # single thread, no cuckoo, positive result
 echo ""
-echo ">>>>>>>>>>>>>>> T=1 C=1 E=1 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=1 C=1 E=1 <<<<<<<<<<<<<"
 run_protocol 1 0 0 1024 2 1
 
 CLIENT_LOG=0
 OVERLAP=0
 # single thread, no cuckoo, negative result
 echo ""
-echo ">>>>>>>>>>>>>>> T=1 C=1 E=0 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=1 C=1 E=0 <<<<<<<<<<<<<"
 run_protocol 1 0 0 1024 2 1
 
 CLIENT_LOG=3
 OVERLAP=3
 # single thread, no cuckoo, multiple result
 echo ""
-echo ">>>>>>>>>>>>>>> T=1 C=1 E=3 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=1 C=1 E=3 <<<<<<<<<<<<<"
 run_protocol 1 0 0 1024 2 1
 
 CLIENT_LOG=0
 OVERLAP=1
 # multi thread, no cuckoo, positive result
 echo ""
-echo ">>>>>>>>>>>>>>> T=4 C=1 E=1 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=4 C=1 E=1 <<<<<<<<<<<<<"
 run_protocol 1 0 0 1024 2 4
 
 CLIENT_LOG=0
 OVERLAP=0
 # multi thread, no cuckoo, negative result
 echo ""
-echo ">>>>>>>>>>>>>>> T=4 C=1 E=0 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=4 C=1 E=0 <<<<<<<<<<<<<"
 run_protocol 1 0 0 1024 2 4
 
 CLIENT_LOG=3
 OVERLAP=5
 # multi thread, no cuckoo, multiple result
 echo ""
-echo ">>>>>>>>>>>>>>> T=4 C=1 E=5 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=4 C=1 E=5 <<<<<<<<<<<<<"
 run_protocol 1 0 0 1024 2 4
 
 CLIENT_LOG=0
 OVERLAP=1
 # single thread, cuckoo, positive result
 echo ""
-echo ">>>>>>>>>>>>>>> T=1 C=8 E=1 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=1 C=8 E=1 <<<<<<<<<<<<<"
 run_protocol 8 512 2 512 2 1
 
 CLIENT_LOG=0
 OVERLAP=0
 # single thread, cuckoo, negative result
 echo ""
-echo ">>>>>>>>>>>>>>> T=1 C=8 E=0 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=1 C=8 E=0 <<<<<<<<<<<<<"
 run_protocol 8 512 2 512 2 1
 
 CLIENT_LOG=1
 OVERLAP=2
 # single thread, cuckoo, multiple result
 echo ""
-echo ">>>>>>>>>>>>>>> T=1 C=8 E=2 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=1 C=8 E=2 <<<<<<<<<<<<<"
 run_protocol 8 512 2 512 2 1
 
 CLIENT_LOG=0
 OVERLAP=1
 # multi thread, cuckoo, positive result
 echo ""
-echo ">>>>>>>>>>>>>>> T=4 C=8 E=1 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=4 C=8 E=1 <<<<<<<<<<<<<"
 run_protocol 8 512 2 512 2 4
 
 CLIENT_LOG=0
 OVERLAP=0
 # multi thread, cuckoo, negative result
 echo ""
-echo ">>>>>>>>>>>>>>> T=4 C=8 E=0 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=4 C=8 E=0 <<<<<<<<<<<<<"
 run_protocol 8 512 2 512 2 4
 
 CLIENT_LOG=1
 OVERLAP=2
 # multi thread, cuckoo, multiple result
 echo ""
-echo ">>>>>>>>>>>>>>> T=4 C=8 E=2 <<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>> T=4 C=8 E=2 <<<<<<<<<<<<<"
 run_protocol 8 512 2 512 2 4

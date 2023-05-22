@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
         Channel channel = session.addChannel();
         channel.waitForConnection();
 
-        Timer offline("[ client ] ddh offline", BLUE);
+        Timer offline("[ client ] oprf offline", YELLOW);
         client.offline();
         offline.stop();
 
@@ -42,12 +42,12 @@ int main(int argc, char *argv[]) {
         channel.recv(ready.data(), 1);
         channel.resetStats();
 
-        Timer online("[ client ] ddh online", BLUE);
+        Timer online("[ client ] oprf online", YELLOW);
         auto [ results, queries ] = client.online(channel);
         online.stop();
 
-        std::cout << "[  both  ] online comm (bytes)\t: ";
-        std::cout << channel.getTotalDataSent() + channel.getTotalDataRecv() << std::endl;
+        float comm = channel.getTotalDataSent() + channel.getTotalDataRecv();
+        std::cout << "[  both  ] oprf comm (MB)\t: " << comm / 1000000 << std::endl;
 
         channel.close();
         session.stop();
@@ -64,15 +64,15 @@ int main(int argc, char *argv[]) {
         Channel channel = session.addChannel();
         channel.waitForConnection();
 
-        Timer timer("[ server ] ddh offline", RED);
+        Timer offline("[ server ] oprf offline", BLUE);
         auto hashtables = server.offline();
-        timer.stop();
+        offline.stop();
 
         vector<u8> ready { 1 };
         channel.send(ready);
         channel.resetStats();
 
-        Timer online("[ server ] ddh online", RED);
+        Timer online("[ server ] oprf online", BLUE);
         server.online(channel);
         online.stop();
 

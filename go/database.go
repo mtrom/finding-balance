@@ -1,8 +1,6 @@
 package main
 
 import (
-    "os"
-
     . "github.com/ahenzinger/simplepir/pir"
 )
 
@@ -21,7 +19,6 @@ func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uin
     rows := psiParams.BucketsPerCol * psiParams.BucketSize * ptPerEntry
     cols := psiParams.DBBytes() * ptPerEntry / rows
 
-    // TODO: support other entryBits
     if entryBits != uint64(8) { panic("unsupported for now") }
     if rows * cols < ptElems { panic("don't expect this to happen") }
 
@@ -39,11 +36,7 @@ func GetDatabaseDims(psiParams *PSIParams, entryBits, ptMod uint64) (uint64, uin
  * @params <values> values to populate database
  */
 func CreateDatabase(entryBits uint64, params *Params, values []uint64) *Database {
-    // prevents SetupDB from printing out 'Total packed DB size'
-    tmp := os.Stdout
-    os.Stdout = nil
 	db := SetupDB(uint64(len(values)), entryBits, params)
-    os.Stdout = tmp
 	db.Data = MatrixZeros(params.L, params.M)
 
     // when multiple entries go into each Z_p elements
@@ -84,7 +77,7 @@ func CreateDatabase(entryBits uint64, params *Params, values []uint64) *Database
 
 /**
  * setup the database info without needing the db itself for the client
- * modified from pir.database.SetupDB()
+ *  modified from pir.database.SetupDB()
  *
  * @params <psiParams> params of the greater psi protocol
  * @params <entryBits> number of bits to represent an entry

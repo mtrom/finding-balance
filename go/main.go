@@ -12,13 +12,6 @@ import (
 )
 
 func main() {
-    log.SetOutput(ioutil.Discard)
-
-    if len(os.Args) < 2 {
-        fmt.Println("expected `client` or `server` subcommand")
-        os.Exit(1)
-    }
-
     client := flag.Bool("client", false, "run the pir protocol as the client")
     server := flag.Bool("server", false, "run the pir protocol as the server")
 
@@ -39,9 +32,18 @@ func main() {
     queries_log := flag.Int64("queries-log", -1, "log of the number of pir queries")
     queries     := flag.Int64("queries", -1, "the number of pir queries")
 
+    debug := flag.Bool("debug", false, "print slightly more robust output")
+
     flag.Parse()
 
-    if *hashtableSize == -1 { fmt.Println("expected --bucket-n argument"); os.Exit(1) }
+    if !*debug {
+        log.SetOutput(ioutil.Discard)
+    } else {
+        // remove timestamp prefix from logs
+        log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+    }
+
+    if *hashtableSize == -1 { fmt.Println("expected --hashtable-size argument"); os.Exit(1) }
     if *bucketsPerCol == -1 { fmt.Println("expected --bucket-per-col argument"); os.Exit(1) }
 
     psiParams := PSIParams{

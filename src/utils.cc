@@ -83,9 +83,9 @@ namespace unbalanced_psi {
 
     void Timer::stop() {
         auto stop = high_resolution_clock::now();
-        duration<float, std::milli> elapsed = stop - start;
+        duration<float> elapsed = stop - start;
         std::cout << std::fixed << std::setprecision(3);
-        std::cout << color << message << " (ms)\t: ";
+        std::cout << color << message << " (s)\t: ";
         std::cout << elapsed.count() << RESET << std::endl;
     }
 }

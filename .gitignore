@@ -44,3 +44,6 @@ bin/
 
 # program output files
 out/
+
+# benchmark log files
+logs/

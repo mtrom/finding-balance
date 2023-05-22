@@ -1,6 +1,8 @@
 package main
 
 import (
+    "log"
+
     . "github.com/ahenzinger/simplepir/pir"
 )
 
@@ -95,6 +97,8 @@ func SetupProtocol(psiParams *PSIParams) (SimplePIR, *Params, uint64) {
     const ENTRY_BITS = uint64(8)
 
     params := GetParams(psiParams, ENTRY_BITS)
+
+    log.Printf("[  both  ] db dims (elements)\t: %dx%d\n", params.L, params.M)
     protocol := SimplePIR{}
 
     return protocol, params, ENTRY_BITS

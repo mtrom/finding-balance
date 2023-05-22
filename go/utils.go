@@ -210,8 +210,8 @@ func (t* Timer) End() {
 
 func (t* Timer) Print() {
     fmt.Printf(
-        "%s%s (ms)\t: %.3f\t%s\n",
-        t.color, t.message, t.elapsed.Seconds() * 1000, RESET,
+        "%s%s (s)\t: %.3f\t%s\n",
+        t.color, t.message, t.elapsed.Seconds(), RESET,
     )
 }
 
