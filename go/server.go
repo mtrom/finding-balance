@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
     "encoding/binary"
     "fmt"
+    "math"
     "net"
     "os"
     "sync"
@@ -74,6 +75,17 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     timer.End()
 
     ///////////////////////////////////////////////////////////
+
+    for i := uint64(0); i < psiParams.CuckooSize; i++ {
+        p := states[i].Params
+        fmt.Printf("[  both  ] db dims (elems)\t: %dx%d\n", p.L, p.M)
+
+        // taken from SimplePIR.database.SetupDB()
+        fmt.Printf(
+            "[  both  ] packed db size (MB)\t: %.3f\n",
+            float64(p.L * p.M) * math.Log2(float64(p.P)) / (1024.0 * 1024.0 * 8.0),
+        )
+    }
 
     // let the client know we're ready to send the hint
     ready := []byte{1}
