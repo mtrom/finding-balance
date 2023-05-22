@@ -81,11 +81,12 @@ def report_stat(stats, metric, name, stat, end="\n"):
 
 def parse_output(output, results):
     for line in output.split("\n"):
+        line = re.sub(r"\x1b\[0(;..)?m", "", line)
+        line = line.strip()
         if not re.search("\(.*\)\s*:\s*\d+(\.\d+)*$", line):
             if "FAILURE" in line: raise Exception("one of the trials failed")
             continue
         # remove color indicators and extra spacing
-        line = re.sub(r"\x1b\[0(;..)?m", "", line)
         line = re.sub("[\t\n]", "", line)
         metric, value = line.split(":")
         results[metric.strip()].append(float(value.strip()))
