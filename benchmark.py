@@ -41,9 +41,9 @@ def main(fn):
     stats = defaultdict(lambda: defaultdict(dict))
     for name in results:
         for metric in results[name]:
+            stats[metric][name]["avg"] = mean(results[name][metric])
             stats[metric][name]["min"] = min(results[name][metric])
             stats[metric][name]["max"] = max(results[name][metric])
-            stats[metric][name]["avg"] = mean(results[name][metric])
             stats[metric][name]["dev"] = stdev(results[name][metric])
 
     # report statistics
