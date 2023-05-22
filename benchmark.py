@@ -147,7 +147,7 @@ def run_protocol(config, name, print_cmds=True):
     if "lwe_n" in config[name]:
         args += [
             "--lwe-n", config[name]["lwe_n"],
-            "--lwe-sigma", config[name]["lwe_n"],
+            "--lwe-sigma", config[name]["lwe_sigma"],
             "--mod", config[name]["mod"],
         ]
 
