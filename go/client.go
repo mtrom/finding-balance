@@ -57,13 +57,22 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
 
     //////////////////// ONLINE ////////////////////
     timer = StartTimer("[ client ] pir online", YELLOW)
+    requests := make([][]byte, len(states))
     for i, state := range states {
-        state.SendQuery(queries[i], server)
+        requests[i] = state.ComputeQuery(queries[i])
     }
+
+    // let the server know we're ready for online
+    ready = []byte{1}
+    server.Write(ready)
+
+    for _, request := range requests {
+        WriteOverNetwork(server, request)
+    }
+
     for i, state := range states {
-        found += state.ReadResponse(
-            oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE], server,
-        )
+        response := ReadOverNetwork(server, state.Params.L * ELEMENT_SIZE)
+        found += state.ReadResponse(response, oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE])
     }
     timer.End()
     ////////////////////////////////////////////////
@@ -125,7 +134,7 @@ func CreateClientState(psiParams *PSIParams, server net.Conn) *ClientState {
 /**
  * send out a query for a column
  */
-func (state* ClientState) SendQuery(column uint64, server net.Conn) {
+func (state* ClientState) ComputeQuery(column uint64) []byte {
     protocol := SimplePIR{}
 
     // translate the hash table index into the rectangular database column
@@ -146,20 +155,13 @@ func (state* ClientState) SendQuery(column uint64, server net.Conn) {
 
     state.Secret, state.Query = &secret, &query
 
-    // let the server know we're ready for online
-    ready := []byte{1}
-    server.Write(ready)
-
-    request := MatrixToBytes(state.Query.Data[0])
-    WriteOverNetwork(server, request)
+    return MatrixToBytes(state.Query.Data[0])
 }
 
 /**
  *  process query response and determine intersection
  */
-func (state* ClientState) ReadResponse(oprf []byte, server net.Conn) int64 {
-    // read response over network
-    response := ReadOverNetwork(server, state.Params.L * ELEMENT_SIZE)
+func (state* ClientState) ReadResponse(response, oprf []byte) int64 {
 
     // if this is a blank query, don't bother recovering
     if state.SkipRecover { return 0; }

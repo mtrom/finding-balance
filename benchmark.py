@@ -51,7 +51,8 @@ def main(fn):
             stats[metric][name]["avg"] = mean(results[name][metric])
             stats[metric][name]["min"] = min(results[name][metric])
             stats[metric][name]["max"] = max(results[name][metric])
-            stats[metric][name]["dev"] = stdev(results[name][metric])
+            if len(results[name][metric]) > 1:
+                stats[metric][name]["dev"] = stdev(results[name][metric])
 
     # report statistics
     for metric in METRICS:
@@ -64,14 +65,16 @@ def main(fn):
 
         for name in results:
             print(f"  {name}")
-            report_stat(stats, metric, name, "min", end="")
-            report_stat(stats, metric, name, "max", end="")
-            report_stat(stats, metric, name, "avg", end="")
-            report_stat(stats, metric, name, "dev")
+            report_dev = config[name].getint("trials") > 1
+            report_stat(stats, metric, name, "avg")
+            report_stat(stats, metric, name, "min")
+            report_stat(stats, metric, name, "max")
+            if report_dev: report_stat(stats, metric, name, "dev")
+            print()
 
         print("")
 
-def report_stat(stats, metric, name, stat, end="\n"):
+def report_stat(stats, metric, name, stat):
     best = min(stats[metric][n][stat] for n in stats[metric])
     diff = stats[metric][name][stat] - best
     if stats[metric][name][stat] == best:
@@ -80,7 +83,7 @@ def report_stat(stats, metric, name, stat, end="\n"):
         output = f"{RED}{stat}={stats[metric][name][stat]:.3f} (+{diff:.3f}){RESET}"
     else:
         output = f"{WHITE}{stat}={stats[metric][name][stat]:.3f} (+{diff:.3f}){RESET}"
-    return print(f"    {output}".ljust(COLUMN_WIDTH), end=end)
+    return print(f"    {output}".ljust(COLUMN_WIDTH), end="")
 
 def parse_output(output, results):
     for line in output.split("\n"):
@@ -103,7 +106,7 @@ def run_protocol(config, name, print_cmds=True):
         cwd=path.dirname(path.realpath(__file__))
     )
     subprocess.run(
-        "seq 0 1 $1 | xargs -n 1 mkdir",
+        f"seq 0 1 {config[name]['cuckoo_size']} | xargs -n 1 mkdir",
         shell=True,
         cwd=path.join(path.dirname(path.realpath(__file__)), "out")
     )
