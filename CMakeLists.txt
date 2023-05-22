@@ -8,10 +8,16 @@ set(CMAKE_CXX_STANDARD 17)
 # places executable in bin/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
+if(APPLE)
+    set(OSNAME "osx")
+else()
+    set(OSNAME "linux")
+endif()
+
 set(
     CMAKE_PREFIX_PATH
-    "/Users/max/research/vcpkg/packages/"
-    "/Users/max/research/vcpkg/packages/ms-gsl_x64-osx/share/"
+    ${PROJECT_SOURCE_DIR}/vcpkg/packages/
+    ${PROJECT_SOURCE_DIR}/vcpkg/packages/ms-gsl_x64-${OSNAME}/share/
 )
 
 # import cryptoTools library

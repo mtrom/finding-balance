@@ -15,7 +15,6 @@ tar -xvzf cmake-3.18.0.tar.gz
 # download libraries
 git clone git@github.com:Visa-Research/coproto.git
 git clone git@github.com:ladnir/cryptoTools.git
-git clone git@github.com:microsoft/vcpkg.git
 
 # make sure install locations are set up
 sudo mkdir -p /usr/local/lib64/cmake/coproto
@@ -30,12 +29,12 @@ sudo chown $(whoami) /usr/local/include/
 # build cryptoTools
 (cd cryptoTools; python3 build.py --install --relic --boost)
 
-# build apsi
-./vcpkg/bootstrap-vcpkg.sh
-./vcpkg/vcpkg install apsi
-
 # download the repo
 git clone git@github.com:mtrom/ddh-unbalanced-psi.git --recursive
+
+# build apsi
+./ddh-unbalanced-psi/vcpkg/bootstrap-vcpkg.sh
+./ddh-unbalanced-psi/vcpkg/vcpkg install apsi
 
 # make necessary directories
 mkdir ddh-unbalanced-psi/out

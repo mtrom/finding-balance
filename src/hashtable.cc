@@ -1,5 +1,3 @@
-#include "../CTPL/ctpl.h"
-
 #include "hashtable.h"
 #include "utils.h"
 
