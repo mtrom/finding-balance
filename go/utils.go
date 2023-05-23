@@ -1,232 +1,133 @@
 package main
 
-import (
-    "bytes"
-    "encoding/binary"
-    "fmt"
-    "io"
-    "net"
-    "os"
-    "time"
+import "math"
+import "fmt"
 
-    . "github.com/ahenzinger/simplepir/pir"
-)
-
-// size of pir input hash in bytes
-const ENTRY_SIZE = 10
-
-// size of a matrix element in bytes
-const ELEMENT_SIZE = 4
-
-// largest datasize to send at once
-const CHUNK_SIZE = 512
-
-const RED    = "\033[0;31m"
-const GREEN  = "\033[0;32m"
-const YELLOW = "\033[0;33m"
-const BLUE   = "\033[0;34m"
-const CYAN   = "\033[0;36m"
-const WHITE  = "\033[0;37m"
-const RESET  = "\033[0m"
-
-
-/**
- * convert byte array to a hex string for debugging
- */
-func toHex(bytes []byte, size uint64) string {
-    const digits = string("0123456789ABCDEF")
-
-    output := make([]byte, size * ENTRY_SIZE * 2)
-    for i := range bytes {
-        output[2 * i] = digits[bytes[i] & 0x0F]
-        output[(2 * i) + 1] = digits[(bytes[i] >> 4) & 0x0F]
-    }
-    return string(output)
+type State struct {
+	Data []*Matrix
 }
 
-/**
- * modified version of Params.PrintParams() that's more consistantly formatted
- */
-func PrintParams(params *Params) {
-    fmt.Printf(
-        "[ params ] db=%dx%d, hint=%dx%d, p=%d\n",
-        params.M, params.L, params.L, params.N, params.P,
-    )
+type CompressedState struct {
+	Seed *PRGKey
 }
 
-/**
- * send data over a network connection, chunking if neccesary
- */
-func WriteOverNetwork(conn net.Conn, data []byte) {
-    size := uint64(len(data))
-    if size < CHUNK_SIZE {
-        conn.Write(data)
-        return
-    }
-
-    i := uint64(0)
-    for {
-        var chunk []byte
-
-        if i >= size  {
-            break
-        } else if i + CHUNK_SIZE > size {
-            chunk = data[i:]
-        } else {
-            chunk = data[i:i+CHUNK_SIZE]
-        }
-
-        n, err := conn.Write(chunk)
-        if err != nil { panic(err) }
-        i += uint64(n)
-    }
+type Msg struct {
+	Data []*Matrix
 }
 
-/**
- * read data from a network connection, chunking if neccesary
- */
-func ReadOverNetwork(conn net.Conn, size uint64) ([]byte) {
-
-    if size < CHUNK_SIZE {
-        data := make([]byte, size)
-        conn.Read(data)
-        return data
-    }
-
-    var data []byte
-    i := uint64(0)
-    for {
-        var chunk []byte
-
-        if i >= size {
-            break
-        } else if i + CHUNK_SIZE > size {
-            chunk = make([]byte, size - i)
-        } else {
-            chunk = make([]byte, CHUNK_SIZE)
-        }
-        n, err := conn.Read(chunk)
-        if err != nil { return []byte{} } // panic(err) }
-        data = append(data, chunk[:n]...)
-        i += uint64(n)
-    }
-
-    if uint64(len(data)) != size {
-        panic("somehow read incorrect size of data")
-    }
-
-    return data
+func (m *Msg) Size() uint64 {
+	sz := uint64(0)
+	for _, d := range m.Data {
+		sz += d.Size()
+	}
+	return sz
 }
 
-/**
- * read database from file including any metadata
- *  note R is the type we're reading in from the file and W is the type we're returning
- *
- * @params <filename>
- * @params <metadata> name for each uint64 metadata value at the beginning of the database
- * @return map of name to metadata value and the database values
- */
-func ReadDatabase[R ~uint64 | ~byte, W ~uint64 | ~byte](
-    filename string,
-    metadata ...string,
-) (map[string]uint64, []W) {
-    file, err := os.ReadFile(filename)
-    if err != nil { panic(err) }
-
-    reader := bytes.NewReader(file)
-
-    metamap := make(map[string]uint64)
-    for _, name := range metadata {
-        var value uint64
-        binary.Read(reader, binary.LittleEndian, &value);
-        metamap[name] = value
-    }
-
-    var values []W
-    for {
-        var value R
-        err := binary.Read(reader, binary.LittleEndian, &value)
-        if err == io.EOF {
-            break
-        } else if err != nil {
-            panic(err)
-        }
-        values = append(values, W(value))
-    }
-
-    return metamap, values
+type MsgSlice struct {
+	Data []Msg
 }
 
-/**
- * serializes matrix into []byte for sending over network
- */
-func MatrixToBytes(matrix *Matrix) []byte {
-    output := make([]byte, len(matrix.Data) * ELEMENT_SIZE)
-    for i := range matrix.Data {
-        binary.LittleEndian.PutUint32(
-            output[i * ELEMENT_SIZE:i * ELEMENT_SIZE + 4],
-            uint32(matrix.Data[i]),
-        )
-    }
-    return output
+func (m *MsgSlice) Size() uint64 {
+	sz := uint64(0)
+	for _, d := range m.Data {
+		sz += d.Size()
+	}
+	return sz
 }
 
-/**
- * deserializes matrix from []byte after receiving over network
- */
-func BytesToMatrix(input []byte, rows, cols uint64) *Matrix {
-    matrix := MatrixNew(rows, cols)
-    for i := uint64(0); i < rows * cols; i++ {
-        matrix.Set(
-            uint64(binary.LittleEndian.Uint32(input[i*4:(i+1)*4])),
-            i / cols, i % cols,
-        )
-    }
-    return matrix
+func MakeState(elems ...*Matrix) State {
+	st := State{}
+	for _, elem := range elems {
+		st.Data = append(st.Data, elem)
+	}
+	return st
 }
 
-/**
- * makes it easy to track timing execution
- */
-type Timer struct {
-    message string
-    color string
-    start time.Time
-    elapsed time.Duration
+func MakeCompressedState(elem *PRGKey) CompressedState {
+	st := CompressedState{}
+	st.Seed = elem
+	return st
 }
 
-func (t* Timer) Start() {
-    t.start = time.Now()
+func MakeMsg(elems ...*Matrix) Msg {
+	msg := Msg{}
+	for _, elem := range elems {
+		msg.Data = append(msg.Data, elem)
+	}
+	return msg
 }
 
-func (t* Timer) Stop() {
-    t.elapsed += time.Since(t.start)
+func MakeMsgSlice(elems ...Msg) MsgSlice {
+	slice := MsgSlice{}
+	for _, elem := range elems {
+		slice.Data = append(slice.Data, elem)
+	}
+	return slice
 }
 
-func (t* Timer) End() {
-    t.Stop()
-    t.Print()
+// Returns the i-th elem in the representation of m in base p.
+func Base_p(p, m, i uint64) uint64 {
+	for j := uint64(0); j < i; j++ {
+		m = m / p
+	}
+	return (m % p)
 }
 
-func (t* Timer) Print() {
-    fmt.Printf(
-        "%s%s (s)\t: %.3f\t%s\n",
-        t.color, t.message, t.elapsed.Seconds(), RESET,
-    )
+// Returns the element whose base-p decomposition is given by the values in vals
+func Reconstruct_from_base_p(p uint64, vals []uint64) uint64 {
+	res := uint64(0)
+	coeff := uint64(1)
+	for _, v := range vals {
+		res += coeff * v
+		coeff *= p
+	}
+	return res
 }
 
-func CreateTimer(message, color string) *Timer {
-    timer := new(Timer)
-    timer.message = message
-    timer.color = color
-    timer.elapsed = 0
-    return timer
+// Returns how many entries in Z_p are needed to represent an element in Z_q
+func Compute_num_entries_base_p(p, log_q uint64) uint64 {
+	log_p := math.Log2(float64(p))
+	return uint64(math.Ceil(float64(log_q) / log_p))
 }
 
-func StartTimer(message, color string) *Timer {
-    timer := new(Timer)
-    timer.message = message
-    timer.color = color
-    timer.start = time.Now()
-    return timer
+// Returns how many Z_p elements are needed to represent a database of N entries,
+// each consisting of row_length bits.
+func Num_DB_entries(N, row_length, p uint64) (uint64, uint64, uint64) {
+	if float64(row_length) <= math.Log2(float64(p)) {
+		// pack multiple DB entries into a single Z_p elem
+		logp := uint64(math.Log2(float64(p)))
+		entries_per_elem := logp / row_length
+		db_entries := uint64(math.Ceil(float64(N) / float64(entries_per_elem)))
+		if db_entries == 0 || db_entries > N {
+			fmt.Printf("Num entries is %d; N is %d\n", db_entries, N)
+			panic("Should not happen")
+		}
+		return db_entries, 1, entries_per_elem
+	}
+
+	// use multiple Z_p elems to represent a single DB entry
+	ne := Compute_num_entries_base_p(p, row_length)
+	return N * ne, ne, 0
+}
+
+func avg(data []float64) float64 {
+	sum := 0.0
+	num := 0.0
+	for _, elem := range data {
+		sum += elem
+		num += 1.0
+	}
+	return sum / num
+}
+
+func stddev(data []float64) float64 {
+	avg := avg(data)
+	sum := 0.0
+	num := 0.0
+	for _, elem := range data {
+		sum += math.Pow(elem-avg, 2)
+		num += 1.0
+	}
+	variance := sum / num // not -1!
+	return math.Sqrt(variance)
 }

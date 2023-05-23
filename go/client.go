@@ -5,8 +5,6 @@ import (
     "bytes"
     "encoding/binary"
     "net"
-
-    . "github.com/ahenzinger/simplepir/pir"
 )
 
 const (
@@ -15,14 +13,6 @@ const (
 
     BLANK_QUERY = ^uint64(0)
 )
-
-/**
- * this seeds the randomness and allows the client to generate the lwe matrix
- * from the seed, but the simplepir library doesn't export it so we need to
- * force this link
- */
-// go:linkname bufPrgReader pir.bufPrgReader
-var bufPrgReader *BufPRGReader
 
 func RunClient(psiParams *PSIParams, server net.Conn) int64 {
 

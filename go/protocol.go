@@ -1,9 +1,5 @@
 package main
 
-import (
-    . "github.com/ahenzinger/simplepir/pir"
-)
-
 /**
  * parameters of the greater psi protocol
  */

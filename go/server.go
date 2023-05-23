@@ -8,8 +8,6 @@ import (
     "net"
     "os"
     "sync"
-
-    . "github.com/ahenzinger/simplepir/pir"
 )
 
 const (
