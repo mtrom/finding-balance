@@ -1,7 +1,7 @@
 default:
 	cmake -B build/
 	make -C build/
-	(cd go; go build -o bin/pir)
+	(cd go; go build -o ../bin/pir)
 
 test:
 	./bin/tests

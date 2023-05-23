@@ -31,6 +31,10 @@ import (
 	"sync"
 )
 
+// #cgo CFLAGS: -O3 -march=native
+// #include "pir.h"
+import "C"
+
 type PRGKey [aes.BlockSize]byte
 
 var prgMutex sync.Mutex
@@ -161,26 +165,8 @@ func (b *BufPRGReader) Uint32() uint32 {
 	return binary.LittleEndian.Uint32(buf[:])
 }
 
-func (b *BufPRGReader) Uint32Batch() []uint32 {
-	var buf [aes.BlockSize]byte
-
-	read := 0
-	for read < aes.BlockSize {
-        n, err := b.stream.Read(buf[:])
-		if err != nil { panic("Should never get here") }
-		read += n
-	}
-
-	return []uint32{
-        binary.LittleEndian.Uint32(buf[0:4]),
-        binary.LittleEndian.Uint32(buf[4:8]),
-        binary.LittleEndian.Uint32(buf[8:12]),
-        binary.LittleEndian.Uint32(buf[12:]),
-    }
-}
-
-func (b *BufPRGReader) Uint32Batched(batchSize uint64) []uint32 {
-    buf := make([]byte, batchSize * 4)
+func (b *BufPRGReader) Elements(num uint64) []C.Elem {
+    buf := make([]byte, num * 4)
 
 	read := 0
 	for read < len(buf) {
@@ -189,9 +175,9 @@ func (b *BufPRGReader) Uint32Batched(batchSize uint64) []uint32 {
 		read += n
 	}
 
-    out := make([]uint32, batchSize)
-    for i := uint64(0); i < batchSize; i ++ {
-        out[i] = binary.LittleEndian.Uint32(buf[i*4:(i+1)*4])
+    out := make([]C.Elem, num)
+    for i := uint64(0); i < num; i ++ {
+        out[i] = C.Elem(binary.LittleEndian.Uint32(buf[i*4:(i+1)*4]))
     }
 
     return out

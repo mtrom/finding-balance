@@ -137,8 +137,14 @@ def run_protocol(config, name, print_cmds=True):
         stdout = subprocess.PIPE,
         text=True
     )
-    sout, _ = server.communicate()
-    cout, _ = client.communicate()
+    sout, serr = server.communicate()
+    cout, cerr = client.communicate()
+
+    if serr or cerr:
+        print(serr)
+        print(cerr)
+        raise Exception("failure when running oprf")
+
     output += sout
     output += cout
     if print_cmds:
@@ -175,8 +181,14 @@ def run_protocol(config, name, print_cmds=True):
         ], stdout = subprocess.PIPE, text=True
     )
 
-    sout, _ = server.communicate()
-    cout, _ = client.communicate()
+    sout, serr = server.communicate()
+    cout, cerr = client.communicate()
+
+    if serr or cerr:
+        print(serr)
+        print(cerr)
+        raise Exception("failure when running pir")
+
     output += sout
     output += cout
     if print_cmds:

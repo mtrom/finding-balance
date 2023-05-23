@@ -47,52 +47,11 @@ func MatrixRand(rows uint64, cols uint64, logmod uint64, mod uint64) *Matrix {
 	return out
 }
 
-func GalaxyBrainMatrixRand(rows, cols uint64) *Matrix {
-	out := MatrixNew(rows, cols)
-
-    batch := bufPrgReader.Uint32Batched(uint64(len(out.Data)))
-    for i := 0; i < len(batch); i++ {
-        out.Data[i] = C.Elem(batch[i])
-    }
-	return out
-}
-func EvenFastestMatrixRand(rows, cols uint64) *Matrix {
-	out := MatrixNew(rows, cols)
-
-    var batchSize uint64
-    if rows > cols {
-        batchSize = rows
-    } else {
-        batchSize = cols
-    }
-
-	for i := 0; i < len(out.Data); {
-        batch := bufPrgReader.Uint32Batched(batchSize)
-        for j := 0; j < len(batch); j++ {
-            out.Data[i] = C.Elem(batch[j])
-            i++
-        }
-	}
-	return out
-}
-
-func FastestMatrixRand(rows, cols uint64) *Matrix {
-	out := MatrixNew(rows, cols)
-	for i := 0; i < len(out.Data); {
-        batch := bufPrgReader.Uint32Batch()
-        for j := 0; j < len(batch); j++ {
-            out.Data[i] = C.Elem(batch[j])
-            i++
-        }
-	}
-	return out
-}
-
 func FasterMatrixRand(rows, cols uint64) *Matrix {
-	out := MatrixNew(rows, cols)
-	for i := 0; i < len(out.Data); i++ {
-        out.Data[i] = C.Elem(bufPrgReader.Uint32())
-	}
+	out := new(Matrix)
+	out.Rows = rows
+	out.Cols = cols
+	out.Data = bufPrgReader.Elements(cols * rows)
 	return out
 }
 

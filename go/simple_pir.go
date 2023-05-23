@@ -97,13 +97,14 @@ func (pi *SimplePIR) GetBW(info DBinfo, p Params) {
 }
 
 func (pi *SimplePIR) Init(info DBinfo, p Params) State {
-        A := MatrixRand(p.M, p.N, p.Logq, 0)
-        return MakeState(A)
+    if p.Logq != 32 { panic("cannot use FasterMatrixRand without logq=32") }
+    A := FasterMatrixRand(p.M, p.N)
+    return MakeState(A)
 }
 
 func (pi *SimplePIR) InitCompressed(info DBinfo, p Params) (State, CompressedState) {
 	seed := RandomPRGKey()
-	return pi.InitCompressedSeeded(info, p, seed) 
+	return pi.InitCompressedSeeded(info, p, seed)
 }
 
 func (pi *SimplePIR) InitCompressedSeeded(info DBinfo, p Params, seed *PRGKey) (State, CompressedState) {
@@ -145,7 +146,8 @@ func (pi *SimplePIR) FakeSetup(DB *Database, p Params) (State, float64) {
 func (pi *SimplePIR) Query(i uint64, shared State, p Params, info DBinfo) (State, Msg) {
 	A := shared.Data[0]
 
-	secret := MatrixRand(p.N, 1, p.Logq, 0)
+    if p.Logq != 32 { panic("cannot use FasterMatrixRand without logq=32") }
+	secret := FasterMatrixRand(p.N, 1)
 	err := MatrixGaussian(p.M, 1)
 	query := MatrixMul(A, secret)
 	query.MatrixAdd(err)

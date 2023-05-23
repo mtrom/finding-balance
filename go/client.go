@@ -46,24 +46,34 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
     ////////////////////////////////////////////////
 
     //////////////////// ONLINE ////////////////////
-    timer = StartTimer("[ client ] pir online", YELLOW)
+    timer = StartTimer("[ client ] pir end2end", YELLOW)
+    comp := StartTimer("[ client ] online comp", YELLOW)
+    network := CreateTimer("[ client ] online net", YELLOW)
     requests := make([][]byte, len(states))
     for i, state := range states {
         requests[i] = state.ComputeQuery(queries[i])
     }
+    comp.Stop()
 
     // let the server know we're ready for online
     ready = []byte{1}
     server.Write(ready)
 
+    network.Start()
     for _, request := range requests {
         WriteOverNetwork(server, request)
     }
+    network.Stop()
 
     for i, state := range states {
+        network.Start()
         response := ReadOverNetwork(server, state.Params.L * ELEMENT_SIZE)
+        network.Stop()
+        comp.Start()
         found += state.ReadResponse(response, oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE])
+        comp.Stop()
     }
+    comp.End()
     timer.End()
     ////////////////////////////////////////////////
 
@@ -89,16 +99,25 @@ type ClientState struct {
  * download hint / lwe matrix and compute parameters
  */
 func CreateClientState(psiParams *PSIParams, server net.Conn) *ClientState {
+    comp := CreateTimer("[ client ] offline comp", YELLOW)
+    network := StartTimer("[ client ] offline net", YELLOW)
     // read bucket size from server
     err := binary.Read(server, binary.LittleEndian, &psiParams.BucketSize)
     if err != nil { panic(err) }
+    network.Stop()
+
+    comp.Start()
 
     // decide protocol parameters
     protocol, params, entryBits := SetupProtocol(psiParams)
     dbInfo := SetupDBInfo(psiParams, entryBits, params)
 
+    comp.Stop()
+    network.Start()
     // read in the 'offline' data (i.e., lwe matrix seed and hint)
     offline := ReadOverNetwork(server, aes.BlockSize + params.L * params.N * ELEMENT_SIZE)
+    network.End()
+    comp.Start()
     hint := BytesToMatrix(offline[aes.BlockSize:], params.L, params.N)
 
     // this seeds the randomness when generating the lwe matrix
@@ -109,6 +128,7 @@ func CreateClientState(psiParams *PSIParams, server net.Conn) *ClientState {
     // generate the lwe matrix from the seed
     lweMatrix := protocol.DecompressState(dbInfo, *params, MakeCompressedState(&seed))
 
+    comp.End()
     return &ClientState{
         Params: params,
         DBInfo: dbInfo,

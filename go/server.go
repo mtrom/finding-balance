@@ -6,7 +6,6 @@ import (
     "fmt"
     "math"
     "net"
-    "os"
     "sync"
 )
 
@@ -41,9 +40,6 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     timer := StartTimer("[ server ] pir offline", BLUE)
     var states []*ServerState
 
-    // prevents SetupDB from printing out 'Total packed DB size'
-    tmp := os.Stdout
-    os.Stdout = nil
     if psiParams.CuckooSize == 1 {
         states = make([]*ServerState, queries)
         state := CreateServerState(&params[0], datasets[0])
@@ -68,7 +64,6 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
         }
         waitGroup.Wait()
     }
-    os.Stdout = tmp
 
     timer.End()
 
@@ -106,18 +101,24 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
 
     ////////////////////////// ONLINE /////////////////////////
 
-    comm = 0
-    timer = StartTimer("[ server ] pir online", BLUE)
+    upload := 0
+    download := 0
+    timer = StartTimer("[ server ] pir end2end", BLUE)
     if psiParams.Threads == 1 || len(states) == 1 {
         requests := make([][]byte, len(states))
+        responses := make([][]byte, len(states))
         for i, state := range states {
             requests[i] = ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
-            comm += len(requests[i])
+            upload += len(requests[i])
         }
+        comp := StartTimer("[ server ] online comp", BLUE)
         for i, state := range states {
-            response := state.AnswerQuery(requests[i])
+            responses[i] = state.AnswerQuery(requests[i])
+        }
+        comp.End()
+        for _, response := range responses {
             WriteOverNetwork(client, response)
-            comm += len(response)
+            download += len(response)
         }
     } else {
         channels := make([]chan []byte, len(states))
@@ -139,7 +140,8 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
     timer.End()
     ///////////////////////////////////////////////////////////
 
-    fmt.Printf("[  both  ] pir comm (MB)\t: %.3f\n", float64(comm) / 1000000)
+    fmt.Printf("[  both  ] client->server (MB)\t: %.3f\n", float64(upload) / 1000000)
+    fmt.Printf("[  both  ] client<-server (MB)\t: %.3f\n", float64(download) / 1000000)
 }
 
 type ServerState struct {
@@ -160,13 +162,17 @@ func CreateServerState(psiParams *PSIParams, dataset []uint64) *ServerState {
     // the SimplePIR library has a global prng so the this cannot be parallelized
     mutex.Lock()
 
+    timer := StartTimer("[ server ] lwe matrix", BLUE)
     // sample seed for lwe random matrix A
     lweMatrix, seed := protocol.InitCompressed(db.Info, *params)
+    timer.End()
 
     mutex.Unlock()
 
+    timer = StartTimer("[ server ] calc hint", BLUE)
     // calculate hint seed
     _, hint := protocol.Setup(db, lweMatrix, *params)
+    timer.End()
 
     // gather lwe matrix seed and hint into 'offline' dataset
     var bytes = make([]byte, aes.BlockSize)
