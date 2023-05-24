@@ -122,19 +122,27 @@ func RunServer(psiParams *PSIParams, client net.Conn, queries uint64) {
         }
     } else {
         channels := make([]chan []byte, len(states))
+        requests := make([][]byte, len(states))
+        responses := make([][]byte, len(states))
         for i, state := range states {
-            request := ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
-            comm += len(request)
+            requests[i] = ReadOverNetwork(client, state.QuerySize * ELEMENT_SIZE)
+            upload += len(requests[i])
+        }
+        comp := StartTimer("[ server ] online comp", BLUE)
+        for i, request := range requests {
             channels[i] = make(chan []byte)
             go func(i int, request []byte) {
                 res := states[i].AnswerQuery(request)
                 channels[i] <- res
-            }(i, request) // TODO: can I remove request?
+            }(i, request)
         }
         for i := range channels {
-            response := <-channels[i]
+            responses[i] = <-channels[i]
+        }
+        comp.End()
+        for _, response := range responses {
             WriteOverNetwork(client, response)
-            comm += len(response)
+            download += len(response)
         }
     }
     timer.End()
