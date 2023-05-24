@@ -20,7 +20,7 @@ METRICS = []
 # helps keep metric output in line
 COLUMN_WIDTH = 40
 
-def main(fn):
+def main(fn, from_logs):
     config = configparser.ConfigParser()
     config.read(fn)
 
@@ -75,11 +75,23 @@ def main(fn):
         print("")
 
 def report_stat(stats, metric, name, stat):
-    best = min(stats[metric][n][stat] for n in stats[metric])
+    # in case some runs have more robust metrics than others
+    if stat not in stats[metric][name]:
+        return
+    best = min(
+        stats[metric][n][stat] if stat in stats[metric][n]
+        else float('inf')
+        for n in stats[metric]
+    )
+    worst = max(
+        stats[metric][n][stat] if stat in stats[metric][n]
+        else float('inf')
+        for n in stats[metric]
+    )
     diff = stats[metric][name][stat] - best
     if stats[metric][name][stat] == best:
         output = f"{GREEN}{stat}={stats[metric][name][stat]:.3f}{RESET}"
-    elif stats[metric][name][stat] == max(stats[metric][n][stat] for n in stats[metric]):
+    elif stats[metric][name][stat] == worst:
         output = f"{RED}{stat}={stats[metric][name][stat]:.3f} (+{diff:.3f}){RESET}"
     else:
         output = f"{WHITE}{stat}={stats[metric][name][stat]:.3f} (+{diff:.3f}){RESET}"
@@ -199,5 +211,4 @@ def run_protocol(config, name, print_cmds=True):
 
 if __name__ == "__main__":
     fn = sys.argv[1]
-    from_logs = len(sys.argv) > 2 and "from-logs" in sys.argv[2]
-    main(sys.argv[1])
+    main(sys.argv[1], len(sys.argv) > 2 and "from-logs" in sys.argv[2])
