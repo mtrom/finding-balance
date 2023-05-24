@@ -6,7 +6,7 @@
 #include "hashtable.h"
 #include "utils.h"
 
-#define MAX_INSERT u64(10)
+#define MAX_INSERT u64(100)
 
 namespace unbalanced_psi {
 

@@ -5,7 +5,7 @@ import sys
 
 from collections import defaultdict
 from statistics import mean, stdev
-from os import path
+from os import path, fsync
 
 RED    = "\033[0;31m"
 GREEN  = "\033[0;32m"
@@ -38,6 +38,9 @@ def main(fn, from_logs):
             if not from_logs:
                 output = run_protocol(config, name, print_cmds=(i == 0))
                 file.write(output)
+                # make sure file is written in case of failures
+                file.flush()
+                fsync(file.fileno())
             else:
                 output = file.read()
             parse_output(output, results[name])
