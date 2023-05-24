@@ -1,18 +1,22 @@
 # Unbalanced PSI from SimplePIR
 
-## Use
+## Deploy on an AWS Machine
+
+To deploy remotely, scrape over `deploy.sh`, make sure the machine has access to
+the private repository by creating a key pair, then run `deploy.sh`.
 
 ```bash
-./bin/datagen --server-n |X| --client-n |Y| --overlap ?
-./bin/offline --client --database out/server.db
-./bin/offline --server --database out/client.db
-./bin/pir --database out/server.edb --queries out/queries.db
-./bin/online --server out/server.edb
-./bin/online --client out/client.db
+AWS=<ip address>
+scp deploy.sh ec2-user@$AWS:/home/ec2-user/
+ssh ec2-user@$AWS
+ssh-keygen -t ed25519 -C "<your@email>" # & add public key to github
+./deploy.sh
 ```
 
+## Build Dependencies Locally
 
-## Build
+If you want to build the project locally, the `deploy.sh` script is still a
+helpful reference but you can also perform the following:
 
 Install OpenSSL:
 ```bash
@@ -24,38 +28,56 @@ make install
 
 Install Coproto:
 ```bash
-py build.py --setup --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
-py build.py --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
+git clone git@github.com:Visa-Research/coproto.git
+cd coproto/
+python build.py --setup --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
+python build.py --install=/usr/local/ -D COPROTO_CPP_VER=14 -D COPROTO_ENABLE_BOOST=true -D COPROTO_ENABLE_OPENSSL=false -D COPROTO_FETCH_AUTO=true
 ```
 
+Install CryptoTools:
 ```bash
+git clone git@github.com:ladnir/cryptoTools.git
 cd cryptoTools
 python3 build.py --install --relic --boost
-cd ..
-cmake -B build/ .
-make -C build/
-./bin/main -flags ...
 ```
 
-Go installation:
+Install APSI:
 ```bash
-cd go/
-go get github.com/ahenzinger/simplepir
-go build -o bin/serverpir go/server.go
+./vcpkg/bootstrap-vcpkg.sh
+./vcpkg/vcpkg install apsi
 ```
 
-## TODO
-- random seeds aren't very random
+## Use
 
-## Notes to Self
-Check for memory leaks: `valgrind --leak-check=yes ./main`
-
-## AWS Commands
-
+To run benchmarks, create an `.ini` file in `params/` with the parameters you
+want to benchmark. See existing files for reference. Then run:
 ```bash
-AWS=<ip address>
-scp deploy.sh ec2-user@$AWS:/home/ec2-user/
-ssh ec2-user@$AWS
-ssh-keygen -t ed25519 -C "mtromanhauser@gmail.com" # & add public key to github
-./deploy.sh
+python3 benchmark.py params/filename.ini
+```
+This will run each parameter configuration `trials` times and report back
+performance and communication. It will also save the stdout of each run in the
+`logs/` directory under the config file name and parameter set name. If you've
+already run a file and have log files in `logs/`, you can just report out the
+statistics by running:
+```bash
+python3 benchmark.py params/filename.ini --from-logs
+```
+
+To run a correctness test, you can either run `./run/correctness.sh` or
+```bash
+python3 benchmark.py params/correctness.ini
+```
+which will run quick tests for a variety of situations.
+
+To run manually, run:
+```
+./bin/datagen --server-log $SERVER_LOG --client $CLIENT_SIZE --overlap $OVERLAP
+
+./bin/oprf --server --cuckoo-size $CUCKOO_SIZE --cuckoo-hashes $CUCKOO_HASHES --hashtable-size $HASHTABLE_SIZE --threads $THREADS &
+./bin/oprf --client --cuckoo-size $CUCKOO_SIZE --cuckoo-hashes $CUCKOO_HASHES --hashtable-size $HASHTABLE_SIZE &
+wait
+
+./bin/pir  --client --cuckoo-size $CUCKOO_SIZE --hashtable-size $HASHTABLE_SIZE --buckets-per-col $BUCKETS_PER_COL --expected $OVERLAP &
+./bin/pir  --server  --cuckoo-size $CUCKOO_SIZE --hashtable-size $HASHTABLE_SIZE --buckets-per-col $BUCKETS_PER_COL --queries $CLIENT_SIZE --threads $THREADS &
+wait
 ```
