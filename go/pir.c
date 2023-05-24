@@ -20,6 +20,18 @@ void matMul(Elem *out, const Elem *a, const Elem *b,
   }
 }
 
+void partialMatMul(
+    Elem *out, const Elem *a, const Elem *b,
+    size_t aRows, size_t aCols, size_t bCols,
+    size_t row
+) {
+    for (size_t k = 0; k < aCols; k++) {
+        for (size_t j = 0; j < bCols; j++) {
+            out[bCols*row + j] += a[aCols*row + k]*b[bCols*k + j];
+        }
+    }
+}
+
 void matMulTransposedPacked(Elem *out, const Elem *a, const Elem *b,
     size_t aRows, size_t aCols, size_t bRows, size_t bCols)
 {

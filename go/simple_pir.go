@@ -117,9 +117,19 @@ func (pi *SimplePIR) DecompressState(info DBinfo, p Params, comp CompressedState
 	return pi.Init(info, p)
 }
 
-func (pi *SimplePIR) Setup(DB *Database, shared State, p Params) (State, Msg) {
+func (pi *SimplePIR) Setup(
+    DB *Database,
+    shared State,
+    p Params,
+    psiParams PSIParams,
+) (State, Msg) {
 	A := shared.Data[0]
-	H := MatrixMul(DB.Data, A)
+    var H *Matrix
+    if psiParams.Threads > 1 && psiParams.CuckooSize == 1 {
+        H = MultiMatrixMul(DB.Data, A)
+    } else {
+        H = MatrixMul(DB.Data, A)
+    }
 
 	// map the database entries to [0, p] (rather than [-p/1, p/2]) and then
 	// pack the database more tightly in memory, because the online computation

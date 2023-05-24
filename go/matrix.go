@@ -5,6 +5,7 @@ package main
 import "C"
 import "fmt"
 import "math/big"
+import "sync"
 
 type Matrix struct {
 	Rows uint64
@@ -159,6 +160,37 @@ func MatrixMul(a *Matrix, b *Matrix) *Matrix {
 
 	C.matMul(outPtr, aPtr, bPtr, aRows, aCols, bCols)
 
+	return out
+}
+
+func MultiMatrixMul(a *Matrix, b *Matrix) *Matrix {
+	if b.Cols == 1 {
+		return MatrixMulVec(a, b)
+	}
+	if a.Cols != b.Rows {
+		fmt.Printf("%d-by-%d vs. %d-by-%d\n", a.Rows, a.Cols, b.Rows, b.Cols)
+		panic("Dimension mismatch")
+	}
+
+	out := MatrixZeros(a.Rows, b.Cols)
+
+    var waitGroup sync.WaitGroup
+    for i := uint64(0); i < a.Rows; i++ {
+        waitGroup.Add(1)
+        go func(row uint64) {
+            defer waitGroup.Done()
+            C.partialMatMul(
+                (*C.Elem)(&out.Data[0]),
+                (*C.Elem)(&a.Data[0]),
+                (*C.Elem)(&b.Data[0]),
+                C.size_t(a.Rows),
+                C.size_t(a.Cols),
+                C.size_t(b.Cols),
+                C.size_t(row),
+            )
+        }(i)
+    }
+    waitGroup.Wait()
 	return out
 }
 

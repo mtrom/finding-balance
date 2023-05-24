@@ -179,7 +179,7 @@ func CreateServerState(psiParams *PSIParams, dataset []uint64) *ServerState {
 
     timer = StartTimer("[ server ] calc hint", BLUE)
     // calculate hint seed
-    _, hint := protocol.Setup(db, lweMatrix, *params)
+    _, hint := protocol.Setup(db, lweMatrix, *params, *psiParams)
     timer.End()
 
     // gather lwe matrix seed and hint into 'offline' dataset
