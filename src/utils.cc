@@ -14,7 +14,6 @@ using namespace std::chrono;
 namespace unbalanced_psi {
 
     vector<INPUT_TYPE> generate_dataset(int size) {
-        // TODO: how to generate a random seed? chicken and egg...
         block seed(std::rand());
         PRNG prng(seed);
         vector<INPUT_TYPE> dataset(size);

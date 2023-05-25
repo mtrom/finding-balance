@@ -117,7 +117,6 @@ func RecoverColumn(
     H := offline.Data[0]
     ans := answer.Data[0]
 
-    // TODO: what does this do?
     ratio := p.P / 2
     offset := uint64(0);
     for j := uint64(0); j < p.M; j++ {
