@@ -63,6 +63,19 @@ statistics by running:
 python3 benchmark.py params/filename.ini --from-logs
 ```
 
+*Note to Friends:* If you want to run a potentially very long benchmark, it's
+probably best to run it in the background and pipe the output somewhere:
+```
+python3 benchmark.py params/filename.ini &> /tmp/benchmark.log &
+```
+
+*If you've been running a parameter file and hit a failure,* I'd suggest using
+`--from-logs` to get the results from the runs that have already completed and
+update the `.ini` file to include only configs you haven't run.
+
+_Generally_, I'd say its just easier to have smaller `.ini` files (i.e., with
+fewer configurations).
+
 To run a correctness test, you can either run `./run/correctness.sh` or
 ```bash
 python3 benchmark.py params/correctness.ini

@@ -20,6 +20,8 @@ METRICS = []
 # helps keep metric output in line
 COLUMN_WIDTH = 40
 
+SUCCESS = "\033[0;32m>>>>>>>>>>>>>>> SUCCESS <<<<<<<<<<<<<<<\033[0m"
+
 def main(fn, from_logs):
     config = configparser.ConfigParser()
     config.read(fn)
@@ -34,17 +36,21 @@ def main(fn, from_logs):
         if name == "DEFAULT": continue
         print(name)
         file = open(f"logs/{fname}/{name}.log", "r" if from_logs else "w")
-        for i in range(config[name].getint("trials")):
-            if not from_logs:
+        if not from_logs:
+            for i in range(config[name].getint("trials")):
                 output = run_protocol(config, name, print_cmds=(i == 0))
+
                 file.write(output)
                 # make sure file is written in case of failures
                 file.flush()
                 fsync(file.fileno())
-            else:
-                output = file.read()
-            parse_output(output, results[name])
-            print(".", end='', flush=True)
+
+                print(".", end='', flush=True)
+                parse_output(output, results[name])
+        else:
+            for output in file.read().split(SUCCESS):
+                parse_output(output, results[name])
+
         print("")
 
     # gether statistics
@@ -101,6 +107,7 @@ def report_stat(stats, metric, name, stat):
     return print(f"    {output}".ljust(COLUMN_WIDTH), end="")
 
 def parse_output(output, results):
+    metrics = defaultdict(float)
     for line in output.split("\n"):
         line = re.sub(r"\x1b\[0(;..)?m", "", line)
         line = line.strip()
@@ -110,8 +117,11 @@ def parse_output(output, results):
         # remove color indicators and extra spacing
         line = re.sub("[\t\n]", "", line)
         metric, value = line.split(":")
-        results[metric.strip()].append(float(value.strip()))
+        metrics[metric.strip()] += float(value.strip())
         if metric.strip() not in METRICS: METRICS.append(metric.strip())
+
+    for metric in metrics:
+        results[metric].append(metrics[metric])
 
 def run_protocol(config, name, print_cmds=True):
     subprocess.run(
