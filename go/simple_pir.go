@@ -156,8 +156,8 @@ func (pi *SimplePIR) FakeSetup(DB *Database, p Params) (State, float64) {
 func (pi *SimplePIR) Query(i uint64, shared State, p Params, info DBinfo) (State, Msg) {
 	A := shared.Data[0]
 
-    if p.Logq != 32 { panic("cannot use FasterMatrixRand without logq=32") }
-	secret := FasterMatrixRand(p.N, 1)
+    if p.Logq != 32 { panic("cannot use MatrixTernaryRand without logq=32") }
+	secret := MatrixTernaryRand(p.N, 1)
 	err := MatrixGaussian(p.M, 1)
 	query := MatrixMul(A, secret)
 	query.MatrixAdd(err)

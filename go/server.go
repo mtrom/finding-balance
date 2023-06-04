@@ -186,7 +186,7 @@ func CreateServerState(psiParams *PSIParams, dataset []uint64) *ServerState {
     var bytes = make([]byte, aes.BlockSize)
     ptr := *seed.Seed
     copy(bytes[:], ptr[:])
-    offline := append(bytes, MatrixToBytes(hint.Data[0])...)
+    offline := append(bytes, ModuloSwitch(hint.Data[0])...)
 
     // expected size of incoming query vectors
     querySize := params.M
@@ -216,7 +216,7 @@ func (state* ServerState) AnswerQuery(request []byte) []byte {
         state.LweMatrix,
         *state.Params,
     )
-    return MatrixToBytes(answer.Data[0])
+    return ModuloSwitch(answer.Data[0])
 }
 
 func ReadServerInputs(psiParams PSIParams) ([][]uint64, []PSIParams ) {

@@ -67,7 +67,7 @@ func RunClient(psiParams *PSIParams, server net.Conn) int64 {
 
     for i, state := range states {
         network.Start()
-        response := ReadOverNetwork(server, state.Params.L * ELEMENT_SIZE)
+        response := ReadOverNetwork(server, ModuloSwitchLength(state.Params.L))
         network.Stop()
         comp.Start()
         found += state.ReadResponse(response, oprf[i*ENTRY_SIZE:(i+1)*ENTRY_SIZE])
@@ -115,10 +115,12 @@ func CreateClientState(psiParams *PSIParams, server net.Conn) *ClientState {
     comp.Stop()
     network.Start()
     // read in the 'offline' data (i.e., lwe matrix seed and hint)
-    offline := ReadOverNetwork(server, aes.BlockSize + params.L * params.N * ELEMENT_SIZE)
+    offline := ReadOverNetwork(
+        server, aes.BlockSize + ModuloSwitchLength(params.L * params.N),
+    )
     network.End()
     comp.Start()
-    hint := BytesToMatrix(offline[aes.BlockSize:], params.L, params.N)
+    hint := ModuloSwitchBack(offline[aes.BlockSize:], params.L, params.N)
 
     // this seeds the randomness when generating the lwe matrix
     var seed PRGKey
@@ -176,7 +178,7 @@ func (state* ClientState) ReadResponse(response, oprf []byte) int64 {
     // if this is a blank query, don't bother recovering
     if state.SkipRecover { return 0; }
 
-    answer := BytesToMatrix(response, state.Params.L, 1)
+    answer := ModuloSwitchBack(response, state.Params.L, 1)
 
     // reconstruct the data based on the answer
     var results []byte

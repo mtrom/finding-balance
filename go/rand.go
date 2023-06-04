@@ -42,6 +42,11 @@ var bufPrgReader *BufPRGReader
 
 const bufSize = 8192
 
+const (
+    ONE_THIRD = ^uint32(0) / uint32(3)
+    TWO_THIRDS = ONE_THIRD * 2
+)
+
 // Produce a random integer in Z_p where mod is the value p.
 func RandInt(mod *big.Int) *big.Int {
 	prgMutex.Lock()
@@ -178,6 +183,31 @@ func (b *BufPRGReader) Elements(num uint64) []C.Elem {
     out := make([]C.Elem, num)
     for i := uint64(0); i < num; i ++ {
         out[i] = C.Elem(binary.LittleEndian.Uint32(buf[i*4:(i+1)*4]))
+    }
+
+    return out
+}
+
+func (b *BufPRGReader) Ternary(num uint64) []C.Elem {
+    buf := make([]byte, num * 4)
+
+	read := 0
+	for read < len(buf) {
+        n, err := b.stream.Read(buf[read:])
+		if err != nil { panic("Should never get here") }
+		read += n
+	}
+
+    out := make([]C.Elem, num)
+    for i := uint64(0); i < num; i ++ {
+        number := binary.LittleEndian.Uint32(buf[i*4:(i+1)*4])
+        if number < ONE_THIRD {
+            out[i] = C.Elem(0)
+        } else if number < TWO_THIRDS {
+            out[i] = C.Elem(1)
+        } else {
+            out[i] = C.Elem(^uint32(0))
+        }
     }
 
     return out

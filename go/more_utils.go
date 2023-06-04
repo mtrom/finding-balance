@@ -7,17 +7,26 @@ import (
     "io"
     "net"
     "os"
+    "math/rand"
     "time"
 )
 
-// size of pir input hash in bytes
-const ENTRY_SIZE = 10
+const (
+    // size of pir input hash in bytes
+    ENTRY_SIZE = 10
 
-// size of a matrix element in bytes
-const ELEMENT_SIZE = 4
+    // size of a matrix element in bytes
+    ELEMENT_SIZE = 4
 
-// largest datasize to send at once
-const CHUNK_SIZE = 512
+    // largest datasize to send at once
+    CHUNK_SIZE = 512
+
+    // number of bits in modulo switch output
+    MOD_SWITCH_BITS = 19
+
+    // number of bits in a byte
+    BYTE_BITS = 8
+)
 
 const RED    = "\033[0;31m"
 const GREEN  = "\033[0;32m"
@@ -154,6 +163,87 @@ func ReadDatabase[R ~uint64 | ~byte, W ~uint64 | ~byte](
 
     return metamap, values
 }
+
+func ModuloSwitchLength(elements uint64) uint64 {
+    length := elements * MOD_SWITCH_BITS / BYTE_BITS
+    if (elements * MOD_SWITCH_BITS) % BYTE_BITS != 0 { length++ }
+
+    // want to be a multiple of uint32s
+    length += 4 - (length % 4)
+
+    return length
+}
+
+/**
+ * serialize a matrix to bytes, but first switch the modulo to 2^MOD_SWITCH_BITS
+ *  allowing us to compress each element into MOD_SWITCH_BITS bits
+ */
+func ModuloSwitch(matrix *Matrix) []byte {
+    output := make([]byte, ModuloSwitchLength(uint64(len(matrix.Data))))
+
+    floating := uint32(0)
+    floatingBits := uint(0)
+    outputIndex := 0
+    for i := range matrix.Data {
+        // switch to new modulus
+        integer := uint32(matrix.Data[i]) / uint32(1 << (32 - MOD_SWITCH_BITS))
+
+        // decimal remainder of the division
+        decimal := float64(matrix.Data[i]) / float64(1 << (32 - MOD_SWITCH_BITS))
+        decimal -= float64(integer)
+
+        // TODO: is this rand slow?
+        // round according to decimal remainder to floor() or ceil() of division
+        if rand.Float64() < decimal { integer++ }
+
+        // add new bits to our floating bits
+        floating = (integer << floatingBits) | floating
+        floatingBits += MOD_SWITCH_BITS
+
+        // if we have a full 32 bits to send, do so
+        if floatingBits >= 32 {
+            binary.LittleEndian.PutUint32(
+                output[outputIndex:outputIndex + 4], floating,
+            )
+            floatingBits -= 32
+            floating = integer >> (MOD_SWITCH_BITS - floatingBits)
+            outputIndex += 4
+        }
+    }
+
+    // include final floating bits
+    if floatingBits > 0 {
+        binary.LittleEndian.PutUint32(output[outputIndex:], floating)
+    }
+
+    return output
+}
+
+/**
+ * deserializes matrix from bytes that are compressed from MOD_SWITCH_BITS bit integers
+ */
+func ModuloSwitchBack(inputs []byte, rows, cols uint64) *Matrix {
+    INPUT_BITS := rows * cols * MOD_SWITCH_BITS
+
+    matrix := MatrixNew(rows, cols)
+    i := uint64(0)
+    for bit := uint64(0); bit < INPUT_BITS; bit += MOD_SWITCH_BITS {
+        // get relevant 32 bits
+        input := binary.LittleEndian.Uint32(inputs[bit/BYTE_BITS:(bit/BYTE_BITS)+4])
+
+        // truncate any least significant bits not used for this element
+        input = input >> (bit % BYTE_BITS)
+
+        // place the bits as the most significant
+        input = input << (32 - MOD_SWITCH_BITS)
+
+        matrix.Set(uint64(input), i / cols, i % cols)
+        i++
+    }
+
+    return matrix
+}
+
 
 /**
  * serializes matrix into []byte for sending over network

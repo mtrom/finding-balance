@@ -56,6 +56,14 @@ func FasterMatrixRand(rows, cols uint64) *Matrix {
 	return out
 }
 
+func MatrixTernaryRand(rows, cols uint64) *Matrix {
+	out := new(Matrix)
+	out.Rows = rows
+	out.Cols = cols
+	out.Data = bufPrgReader.Ternary(cols * rows)
+	return out
+}
+
 func MatrixZeros(rows uint64, cols uint64) *Matrix {
 	out := MatrixNew(rows, cols)
 	for i := 0; i < len(out.Data); i++ {
