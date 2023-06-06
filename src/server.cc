@@ -73,6 +73,8 @@ namespace unbalanced_psi {
 
         vector<u8> response(request.size());
 
+        Timer timer("[ server ] oprf online comp", BLUE);
+
         // encrypt each point under the server's key
         Point point;
         for (auto i = 0; i < request.size() / Point::save_size; i++) {
@@ -86,6 +88,8 @@ namespace unbalanced_psi {
                 Point::save_size
             });
         }
+
+        timer.stop();
         channel.send(response);
     }
 
