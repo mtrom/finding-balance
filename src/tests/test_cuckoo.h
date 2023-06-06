@@ -8,4 +8,5 @@ namespace unbalanced_psi {
     void test_cuckoo_vector_insert();
     void test_cuckoo_vector_insert_many();
     void test_cuckoo_vector_insert_overfill();
+    void test_cuckoo_failure_rate();
 }

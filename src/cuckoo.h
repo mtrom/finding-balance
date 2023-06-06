@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <random>
 
 #include "defines.h"
 #include "hashtable.h"
@@ -60,6 +61,10 @@ namespace unbalanced_psi {
 
         // number of hashes to cuckoo hash with
         u64 hashes;
+
+        // uniform randomness to choose hash to evict with
+        std::mt19937_64 gen;
+        std::uniform_int_distribution<u64> random;
 
         /**
          * setup vector with given parameters

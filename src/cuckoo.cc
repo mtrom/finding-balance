@@ -48,30 +48,41 @@ namespace unbalanced_psi {
      * Cuckoo Vector : used by the client
      */
     CuckooVector::CuckooVector(const PSIParams& params) :
-        hashes(params.cuckoo_hashes), table(params.cuckoo_size, std::nullopt) { };
+        hashes(params.cuckoo_hashes),
+        table(params.cuckoo_size, std::nullopt),
+        random(0, params.cuckoo_hashes - 1) { };
 
     void CuckooVector::insert(const vector<u8>& entry, u64 query) {
         auto to_insert = std::optional<tuple<vector<u8>, u64>>{std::make_tuple(entry, query)};
-        u64 i = 0;
+        u64 attemps = 0;
 
+        // PRNG prng(block(*reinterpret_cast<const u64*>(&entry[0])));
+        auto random = std::uniform_int_distribution<u64>(0, hashes - 1);
         while (true) {
-            if (i > MAX_INSERT) { throw std::runtime_error("reached maximum insertion attempts"); }
-
-            u64 hash_n = i % hashes;
-            u64 index = cuckoo_hash(std::get<0>(to_insert.value()), hash_n, table.size());
-
-            // insert if empty
-            if (!table[index]) {
-                table[index] = to_insert;
-                break;
+            if (attemps > MAX_INSERT) {
+                throw std::runtime_error("reached maximum insertion attempts");
             }
+
+            for (auto hash_n = 0; hash_n < hashes; hash_n++) {
+                u64 index = cuckoo_hash(std::get<0>(to_insert.value()), hash_n, table.size());
+
+                // insert if empty
+                if (!table[index]) {
+                    table[index] = to_insert;
+                    return;
+                }
+            }
+
+            // auto hash_n = prng.get<u64>() % hashes;
+            auto hash_n = random(gen);
+            u64 index = cuckoo_hash(std::get<0>(to_insert.value()), hash_n, table.size());
 
             // evict otherwise
             auto evicted = table[index];
             table[index] = to_insert;
             to_insert = evicted;
 
-            i++;
+            attemps++;
         }
     }
 

@@ -30,6 +30,7 @@ int main() {
         th.add("test_cuckoo_vector_insert         ", test_cuckoo_vector_insert);
         th.add("test_cuckoo_vector_insert_many    ", test_cuckoo_vector_insert_many);
         th.add("test_cuckoo_vector_insert_overfill", test_cuckoo_vector_insert_overfill);
+        th.add("test_cuckoo_failure_rate          ", test_cuckoo_failure_rate);
     });
 
     tests.runAll();
